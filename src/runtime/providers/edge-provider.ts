@@ -216,6 +216,7 @@ export class EdgeProvider implements TtsProvider {
 	}
 
 	private normalizeText(text: string) {
+		// oxlint-disable-next-line no-control-regex -- 有意清除 Edge TTS 文本中的控制字符（保留制表符与换行）
 		return text.replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F]/g, ' ');
 	}
 

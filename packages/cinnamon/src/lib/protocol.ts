@@ -1,4 +1,3 @@
-/// <reference path="../hook-event.d.ts" />
 const EVENT_NAMES = new Set([
 	'brief.skipped',
 	'audio.preparing',

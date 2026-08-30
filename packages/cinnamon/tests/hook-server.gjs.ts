@@ -1,5 +1,3 @@
-/// <reference path="../src/gjs-types.d.ts" />
-/// <reference path="../src/hook-event.d.ts" />
 
 const Gio = imports.gi.Gio;
 const GLib = imports.gi.GLib;

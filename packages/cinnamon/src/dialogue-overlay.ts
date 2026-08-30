@@ -1,5 +1,3 @@
-/// <reference path="./gjs-types.d.ts" />
-/// <reference path="./hook-event.d.ts" />
 
 interface CinnamonActor {
 	visible: boolean;

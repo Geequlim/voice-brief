@@ -1,4 +1,3 @@
-/// <reference path="./hook-event.d.ts" />
 
 declare const global: {
 	log(message: string): void;
