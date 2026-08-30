@@ -1,0 +1,15 @@
+{
+	"compilerOptions": {
+		"target": "esnext",
+		"module": "NodeNext",
+		"moduleResolution": "nodenext",
+		"lib": ["ESNext"],
+		"strict": true,
+		"noEmit": true,
+		"skipLibCheck": true,
+		"esModuleInterop": true,
+		"noPropertyAccessFromIndexSignature": false,
+		"types": ["node"]
+	},
+	"include": ["./*.mts"]
+}

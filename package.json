@@ -1,0 +1,47 @@
+{
+	"name": "voice-brief",
+	"version": "0.4.0",
+	"private": true,
+	"description": "Voice Brief standalone workspace",
+	"workspaces": [
+		"packages/*"
+	],
+	"packageManager": "yarn@4.17.1",
+	"engines": {
+		"node": ">=24.0.0"
+	},
+	"devDependencies": {
+		"@rollup/plugin-yaml": "^5.0.0",
+		"@rspack/cli": "^2.0.8",
+		"@rspack/core": "^2.0.8",
+		"@tinyaxis/toolkit": "^0.4.1",
+		"@types/js-yaml": "^4.0.9",
+		"@types/node": "^26.0.0",
+		"@types/play-sound": "^1",
+		"@types/ws": "^8.18.1",
+		"eslint": "^10.5.0",
+		"eslint-plugin-import-x": "^4.16.2",
+		"jiti": "^2.7.0",
+		"oxlint": "^1.70.0",
+		"typescript": "^7.0.2",
+		"typescript-compiler-api": "npm:typescript@^6.0.3",
+		"typescript-eslint": "^8.64.0",
+		"vitest": "^4.1.9"
+	},
+	"dependencies": {
+		"@sinclair/typebox": "^0.34.49",
+		"axios": "^1.18.1",
+		"commander": "^15.0.0",
+		"env-paths": "^4.0.0",
+		"gray-matter": "^4.0.3",
+		"https-proxy-agent": "^9.0.0",
+		"js-yaml": "^4.1.1",
+		"kkrpc": "2.1.0",
+		"play-sound": "^1.1.6",
+		"socks-proxy-agent": "^10.0.0",
+		"ws": "^8.20.0"
+	},
+	"scripts": {
+		"postinstall": "tiny hooks run postinstall --if-present"
+	}
+}

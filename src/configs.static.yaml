@@ -1,0 +1,14 @@
+name: voice-brief
+port: 0
+build:
+  profile: cli
+artifact:
+  type: package
+  bin: voice-brief
+publish:
+  production:
+    mode: production
+    push:
+      - cd dist/{{target}}
+      - yarn install
+      - yarn npm publish --access public

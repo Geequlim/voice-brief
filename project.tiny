@@ -1,0 +1,131 @@
+develop:
+  description: Voice Brief 开发工作台
+  actions:
+    - name: cli
+      description: 以 watch 模式构建并调试 CLI
+      command: yarn rspack watch
+    - name: cinnamon
+      description: 构建、安装并重载 Cinnamon 扩展
+      command:
+        - yarn workspace @tinyaxis/voice-brief-cinnamon build
+        - yarn workspace @tinyaxis/voice-brief-cinnamon install:dev
+        - gdbus call --session --dest org.Cinnamon --object-path /org/Cinnamon --method org.Cinnamon.ReloadXlet voice-brief@tinyaxis EXTENSION
+      actions:
+        - name: install
+          description: 构建并安装 Cinnamon 扩展到当前用户
+          command:
+            - yarn workspace @tinyaxis/voice-brief-cinnamon build
+            - yarn workspace @tinyaxis/voice-brief-cinnamon install:dev
+        - name: smoke
+          description: 依次展示全部 Cinnamon 视觉冒烟场景
+          command: yarn workspace @tinyaxis/voice-brief-cinnamon smoke all
+          actions:
+            - name: entrance
+              description: 展示播放就绪后的头像与完整对话入场动画
+              command: yarn workspace @tinyaxis/voice-brief-cinnamon smoke entrance
+            - name: dialogue
+              description: 展示标准完整对话展开
+              command: yarn workspace @tinyaxis/voice-brief-cinnamon smoke dialogue
+            - name: multiline
+              description: 展示显式换行与长文本高度
+              command: yarn workspace @tinyaxis/voice-brief-cinnamon smoke multiline
+            - name: no-session
+              description: 展示无会话名称时的模型信息回退
+              command: yarn workspace @tinyaxis/voice-brief-cinnamon smoke no-session
+            - name: queue
+              description: 展示连续播报原位交接与内容替换强调
+              command: yarn workspace @tinyaxis/voice-brief-cinnamon smoke queue
+    - name: lint
+      description: 静态代码分析
+      tooltip: 执行 Oxlint / ESLint / 零内部依赖检查
+      command:
+        - yarn oxlint -c oxlint.config.mts -f stylish src tests tools packages/cinnamon/src packages/cinnamon/tests
+        - yarn eslint .
+        - node tools/check-package.mts
+        - echo "Lint 检查完成"
+      actions:
+        - name: fix
+          description: 自动修正代码问题
+          command:
+            - yarn oxlint -c oxlint.config.mts -f stylish src tests tools packages/cinnamon/src packages/cinnamon/tests --fix
+            - yarn eslint . --fix
+        - name: typecheck
+          description: TypeScript 类型检查
+          command: yarn tsc -p tsconfig.json --noEmit
+    - name: fix-worktree
+      description: 规范化工作区
+      tooltip: 只处理未暂存的新增和修改文件
+      command: yarn tiny hooks run fix-worktree
+    - name: test
+      description: 执行单元与集成测试
+      command: yarn vitest run tests
+      actions:
+        - name: cli
+          description: 执行 CLI 单元与集成测试
+          command: yarn vitest run tests
+        - name: cinnamon
+          description: 执行 Cinnamon 扩展测试
+          command: yarn workspace @tinyaxis/voice-brief-cinnamon test
+        - name: package
+          description: 执行打包产物验证测试
+          actions:
+            - name: cli
+              description: 验证 CLI tarball staging
+              command: yarn vitest run tools/package-cli.test.mts
+            - name: cinnamon
+              description: 验证 Cinnamon tarball staging
+              command: yarn vitest run tools/package-cinnamon.test.mts
+    - name: compile
+      description: 编译全部生产产物
+      command:
+        - yarn tiny compile/cli
+        - yarn tiny compile/cinnamon
+      actions:
+        - name: cli
+          description: 类型检查并构建 CLI 生产产物
+          command:
+            - yarn tsc -p tsconfig.json --noEmit
+            - yarn rspack --env production=true
+        - name: cinnamon
+          description: 构建 Cinnamon 扩展产物
+          command: yarn workspace @tinyaxis/voice-brief-cinnamon build
+    - name: package
+      description: 组装全部 npm staging 目录
+      command:
+        - node tools/package-cli.mts
+        - node tools/package-cinnamon.mts
+      actions:
+        - name: cli
+          description: 组装并校验 @tinyaxis/voice-brief staging
+          command: node tools/package-cli.mts
+        - name: cinnamon
+          description: 组装并校验 @tinyaxis/voice-brief-cinnamon staging
+          command: node tools/package-cinnamon.mts
+    - name: publish
+      description: 发布到 npm 仓库（需要维护者授权）
+      actions:
+        - name: cli
+          description: 发布 @tinyaxis/voice-brief
+          command: yarn npm publish dist/npm/voice-brief
+        - name: cinnamon
+          description: 发布 @tinyaxis/voice-brief-cinnamon
+          command: yarn npm publish dist/npm/voice-brief-cinnamon
+
+hooks:
+  fix-worktree:
+    - name: oxlint
+      command: yarn oxlint -c oxlint.config.mts -f stylish --fix src tests tools packages/cinnamon/src packages/cinnamon/tests
+    - name: eslint
+      command: yarn eslint . --fix
+
+  pre-commit:
+    - name: check-lockfile
+      command: yarn install --immutable --mode=skip-build
+    - name: oxlint
+      command: yarn oxlint -c oxlint.config.mts -f stylish --fix src tests tools packages/cinnamon/src packages/cinnamon/tests
+    - name: eslint
+      command: yarn eslint . --fix
+
+  postinstall:
+    - name: install-git-hooks
+      command: yarn tiny hooks install --force

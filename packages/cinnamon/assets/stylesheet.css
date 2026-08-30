@@ -1,0 +1,74 @@
+.voice-brief-dialogue-surface {
+	border: 2px solid #eb4272;
+	border-radius: 32px;
+	background-gradient-direction: vertical;
+	background-gradient-start: rgba(29, 25, 36, 0.97);
+	background-gradient-end: rgba(16, 17, 25, 0.97);
+	box-shadow: 0 12px 32px rgba(0, 0, 0, 0.92);
+}
+
+.voice-brief-dialogue-avatar {
+	width: 96px;
+	height: 96px;
+	border: 3px solid rgba(255, 255, 255, 0.96);
+	border-radius: 999px;
+	background-color: #ffffff;
+	background-size: cover;
+	box-shadow: 0 10px 24px rgba(0, 0, 0, 0.78);
+}
+
+.voice-brief-dialogue-panel {
+	spacing: 8px;
+}
+
+.voice-brief-dialogue-header {
+	spacing: 10px;
+}
+
+.voice-brief-dialogue-context-label {
+	padding-right: 18px;
+	text-align: right;
+}
+
+.voice-brief-dialogue-name {
+	font-size: 20px;
+	font-weight: bold;
+	color: #eb4272;
+}
+
+.voice-brief-dialogue-text {
+	padding: 1px 0;
+	font-size: 20px;
+	font-weight: bold;
+	color: #ffffff;
+}
+
+.voice-brief-dialogue-runtime {
+	font-size: 12px;
+	color: rgba(255, 255, 255, 0.46);
+}
+
+.voice-brief-dialogue-hide-row {
+	padding-right: 18px;
+}
+
+.voice-brief-dialogue-hide-button {
+	padding: 1px 8px;
+	border: 0;
+	border-radius: 999px;
+	background-color: transparent;
+	box-shadow: none;
+	font-size: 11px;
+	color: rgba(255, 255, 255, 0.38);
+}
+
+.voice-brief-dialogue-hide-button:hover,
+.voice-brief-dialogue-hide-button:focus {
+	background-color: rgba(255, 255, 255, 0.08);
+	color: rgba(255, 255, 255, 0.7);
+}
+
+.voice-brief-dialogue-hide-button:active {
+	background-color: rgba(255, 255, 255, 0.12);
+	color: rgba(255, 255, 255, 0.9);
+}

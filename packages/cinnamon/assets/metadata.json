@@ -1,0 +1,11 @@
+{
+	"uuid": "voice-brief@tinyaxis",
+	"name": "Voice Brief",
+	"description": "Display Voice Brief playback events as desktop dialogue",
+	"author": "TinyAxis",
+	"url": "https://github.com/Geequlim/voice-brief",
+	"version": 1,
+	"cinnamon-version": [
+		"6.6"
+	]
+}

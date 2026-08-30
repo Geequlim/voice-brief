@@ -1,0 +1,45 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  verify:
+    name: Lint / Test / Compile / Package
+    runs-on: ubuntu-latest
+    env:
+      YARN_ENABLE_TELEMETRY: '0'
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      - name: 安装 GJS（Cinnamon 扩展测试）
+        run: sudo apt-get update && sudo apt-get install -y gjs
+
+      - name: 安装依赖
+        run: yarn install --immutable
+
+      - name: 静态检查
+        run: yarn tiny lint
+
+      - name: 单元与集成测试
+        run: yarn tiny test
+
+      - name: Cinnamon 扩展测试
+        run: yarn tiny test/cinnamon
+
+      - name: 编译生产产物
+        run: yarn tiny compile
+
+      - name: 组装 npm staging
+        run: yarn tiny package
+
+      - name: 打包产物验证
+        run: |
+          yarn tiny test/package/cli
+          yarn tiny test/package/cinnamon

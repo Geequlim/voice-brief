@@ -1,0 +1,24 @@
+{
+	"display": {
+		"type": "section",
+		"description": "显示"
+	},
+	"screen-position": {
+		"type": "combobox",
+		"description": "屏幕位置",
+		"default": "top",
+		"options": {
+			"靠顶部": "top",
+			"靠底部": "bottom"
+		}
+	},
+	"screen-margin": {
+		"type": "spinbutton",
+		"description": "屏幕边距",
+		"default": 112,
+		"min": 0,
+		"max": 512,
+		"step": 8,
+		"units": "px"
+	}
+}

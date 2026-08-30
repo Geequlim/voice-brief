@@ -1,0 +1,15 @@
+{
+	"compilerOptions": {
+		"target": "ES2022",
+		"module": "preserve",
+		"lib": ["ES2022"],
+		"types": ["@girs/gjs", "@girs/gjs/dom"],
+		"strict": true,
+		"noUncheckedIndexedAccess": true,
+		"noEmitOnError": true,
+		"skipLibCheck": true,
+		"rootDir": "src",
+		"outDir": "dist/voice-brief@tinyaxis"
+	},
+	"include": ["src/**/*.ts", "src/**/*.d.ts"]
+}
