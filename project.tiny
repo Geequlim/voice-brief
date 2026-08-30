@@ -108,10 +108,10 @@ publish:
           command: node tools/package-cinnamon.mts
     - name: cli
       description: 发布 @tinyaxis/voice-brief 到 npm（需要维护者授权）
-      command: yarn npm publish dist/npm/voice-brief
+      command: cd dist/npm/voice-brief && node ../../../.yarn/releases/yarn-4.17.1.cjs npm publish --access public
     - name: cinnamon
       description: 发布 @tinyaxis/voice-brief-cinnamon 到 npm（需要维护者授权）
-      command: yarn npm publish dist/npm/voice-brief-cinnamon
+      command: cd dist/npm/voice-brief-cinnamon && node ../../../.yarn/releases/yarn-4.17.1.cjs npm publish --access public
 
 hooks:
   fix-worktree:

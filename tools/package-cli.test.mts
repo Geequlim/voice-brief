@@ -36,14 +36,16 @@ describe('CLI 打包验证', () => {
 			name: string;
 			license: string;
 			private?: boolean;
-			bin: Record<string, string>;
+			bin: string | Record<string, string>;
 			engines: Record<string, string>;
 			version: string;
 		};
 		expect(manifest.name).toBe('@tinyaxis/voice-brief');
 		expect(manifest.license).toBe('MIT');
 		expect(manifest.private).toBeUndefined();
-		expect(manifest.bin).toEqual({ 'voice-brief': './index.bin.js' });
+		// yarn install 会把单条目 bin 规范化为字符串简写；两种形态对 npm 等价
+		const bin = typeof manifest.bin === 'string' ? { 'voice-brief': manifest.bin } : manifest.bin;
+		expect(bin).toEqual({ 'voice-brief': './index.bin.js' });
 		expect(manifest.engines).toEqual({ node: '>=24.0.0' });
 		expect(manifest.version).toBe('0.4.0');
 	}, 60_000);

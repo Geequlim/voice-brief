@@ -1,3 +1,4 @@
+import { spawnSync } from 'node:child_process';
 import fs from 'node:fs';
 import { isBuiltin } from 'node:module';
 import path from 'node:path';
@@ -90,8 +91,18 @@ function main() {
 	fs.copyFileSync(path.join(workspace, 'README.md'), path.join(stagingDirectory, 'README.md'));
 	fs.copyFileSync(path.join(workspace, 'LICENSE'), path.join(stagingDirectory, 'LICENSE'));
 	fs.writeFileSync(path.join(stagingDirectory, 'package.json'), `${JSON.stringify(manifest, null, '\t')}\n`);
+	// 占位锁文件使 staging 被视为独立项目，随后填充真实解析记录
 	fs.writeFileSync(path.join(stagingDirectory, 'yarn.lock'), '\n');
 	fs.chmodSync(path.join(stagingDirectory, 'index.bin.js'), 0o755);
+
+	// npm publish 需要锁文件里有本包的解析记录；update-lockfile 模式只生成锁文件，不安装链接
+	const yarnRelease = path.join(workspace, '.yarn', 'releases', 'yarn-4.17.1.cjs');
+	const lockfile = spawnSync(process.execPath, [yarnRelease, 'install', '--mode=update-lockfile'], {
+		cwd: stagingDirectory,
+		stdio: 'inherit',
+		env: { ...process.env, YARN_ENABLE_TELEMETRY: '0' },
+	});
+	if (lockfile.status !== 0) fail('staging lockfile 生成失败');
 
 	console.log(`[package-cli] staging 组装完成: ${path.relative(workspace, stagingDirectory)}`);
 	console.log(`[package-cli] external 依赖: ${Object.entries(dependencies).map(([name, spec]) => `${name}@${spec}`).join(', ')}`);

@@ -43,7 +43,7 @@ function checkLockfile() {
 function checkStagingWhitelist() {
 	const cliStaging = path.join(workspace, 'dist', 'npm', 'voice-brief');
 	if (!fs.existsSync(path.join(cliStaging, 'package.json'))) return;
-	const allowed = new Set(['index.js', 'index.bin.js', 'dependencies.js', 'package.json', 'README.md', 'LICENSE', 'yarn.lock', 'package.tgz']);
+	const allowed = new Set(['index.js', 'index.bin.js', 'dependencies.js', 'package.json', 'README.md', 'LICENSE', 'yarn.lock', 'package.tgz', '.yarn']);
 	for (const entry of fs.readdirSync(cliStaging)) {
 		if (!allowed.has(entry)) {
 			problems.push(`CLI staging 含白名单外文件: ${entry}`);
