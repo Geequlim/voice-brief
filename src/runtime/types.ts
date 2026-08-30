@@ -23,9 +23,23 @@ export interface ProviderCacheDescriptor {
 }
 
 export interface SynthesizeResult {
+	alignment?: SpeechAlignment;
 	audioFile: string;
 	provider: string;
 	audioDurationMs?: number;
+}
+
+export interface SpeechAlignmentCue {
+	endChar: number;
+	endMs: number;
+	startChar: number;
+	startMs: number;
+	text: string;
+}
+
+export interface SpeechAlignment {
+	cues: SpeechAlignmentCue[];
+	source: string;
 }
 
 export interface PreparedAudioResult extends SynthesizeResult {

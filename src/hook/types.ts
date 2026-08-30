@@ -13,6 +13,8 @@ export type {
 	VoiceBriefHookEventName,
 	VoiceBriefHookPersona,
 	VoiceBriefHookSkipReason,
+	SpeechAlignment,
+	SpeechAlignmentCue,
 	VoiceBriefHookSource,
 } from './schema';
 

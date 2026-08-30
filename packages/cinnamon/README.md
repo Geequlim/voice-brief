@@ -22,7 +22,7 @@ yarn workspace @tinyaxis/voice-brief-cinnamon build
 构建、安装到当前用户并让 Cinnamon 重载扩展：
 
 ```bash
-yarn tiny develop/voice-brief/cinnamon
+yarn tiny develop/cinnamon
 ```
 
 ### 视觉冒烟测试
@@ -30,14 +30,17 @@ yarn tiny develop/voice-brief/cinnamon
 扩展安装并启用后，可以直接向 Hook Socket 注入测试事件，不会请求 TTS 或播放语音：
 
 ```bash
-yarn tiny develop/voice-brief/cinnamon/smoke
-yarn tiny develop/voice-brief/cinnamon/smoke/entrance
-yarn tiny develop/voice-brief/cinnamon/smoke/dialogue
-yarn tiny develop/voice-brief/cinnamon/smoke/multiline
-yarn tiny develop/voice-brief/cinnamon/smoke/no-session
+yarn tiny develop/cinnamon/smoke
+yarn tiny develop/cinnamon/smoke/entrance
+yarn tiny develop/cinnamon/smoke/dialogue
+yarn tiny develop/cinnamon/smoke/multiline
+yarn tiny develop/cinnamon/smoke/no-session
+yarn tiny develop/cinnamon/smoke/karaoke
 ```
 
 默认读取 `~/.config/voice-brief/personas/甜妹助理.md`。可以通过 `VOICE_BRIEF_SMOKE_PERSONA` 指定其他人设文件，通过 `VOICE_BRIEF_CINNAMON_SOCKET` 指定其他 Socket。
+
+`karaoke` 会直接启动 `mpv` 播放仓库暂存的 MP3，并按其 16 kHz 的逐字对齐数据高亮文字；它不会经过 Voice Brief runtime，因此不会触发全局的音频压低。默认使用 `mpv`；如有需要，可通过 `VOICE_BRIEF_KARAOKE_PLAYER` 指定兼容的播放器命令。
 
 ## 测试
 

@@ -1,0 +1,387 @@
+{
+  "text": "哎呀，今天去买奶茶的时候，店员听我说话就问我是不是福建的，我说对啊，然后她说她也是福建的，我们就用闽南话聊起来了，感觉特别亲切，真的好开心啊。",
+  "language": "zh",
+  "words": [
+    {
+      "word": "哎",
+      "start_sample": 3840,
+      "end_sample": 6400,
+      "confidence": 0
+    },
+    {
+      "word": "呀",
+      "start_sample": 6400,
+      "end_sample": 7680,
+      "confidence": 0
+    },
+    {
+      "word": "今",
+      "start_sample": 7680,
+      "end_sample": 10240,
+      "confidence": 0
+    },
+    {
+      "word": "天",
+      "start_sample": 10240,
+      "end_sample": 12800,
+      "confidence": 0
+    },
+    {
+      "word": "去",
+      "start_sample": 12800,
+      "end_sample": 14080,
+      "confidence": 0
+    },
+    {
+      "word": "买",
+      "start_sample": 14080,
+      "end_sample": 17920,
+      "confidence": 0
+    },
+    {
+      "word": "奶",
+      "start_sample": 17920,
+      "end_sample": 20480,
+      "confidence": 0
+    },
+    {
+      "word": "茶",
+      "start_sample": 20480,
+      "end_sample": 24320,
+      "confidence": 0
+    },
+    {
+      "word": "的",
+      "start_sample": 24320,
+      "end_sample": 25600,
+      "confidence": 0
+    },
+    {
+      "word": "时",
+      "start_sample": 25600,
+      "end_sample": 29440,
+      "confidence": 0
+    },
+    {
+      "word": "候",
+      "start_sample": 29440,
+      "end_sample": 33280,
+      "confidence": 0
+    },
+    {
+      "word": "店",
+      "start_sample": 33280,
+      "end_sample": 37120,
+      "confidence": 0
+    },
+    {
+      "word": "员",
+      "start_sample": 37120,
+      "end_sample": 38400,
+      "confidence": 0
+    },
+    {
+      "word": "听",
+      "start_sample": 38400,
+      "end_sample": 40960,
+      "confidence": 0
+    },
+    {
+      "word": "我",
+      "start_sample": 43520,
+      "end_sample": 44800,
+      "confidence": 0
+    },
+    {
+      "word": "说",
+      "start_sample": 44800,
+      "end_sample": 46080,
+      "confidence": 0
+    },
+    {
+      "word": "话",
+      "start_sample": 46080,
+      "end_sample": 48640,
+      "confidence": 0
+    },
+    {
+      "word": "就",
+      "start_sample": 48640,
+      "end_sample": 51200,
+      "confidence": 0
+    },
+    {
+      "word": "问",
+      "start_sample": 51200,
+      "end_sample": 52480,
+      "confidence": 0
+    },
+    {
+      "word": "我",
+      "start_sample": 52480,
+      "end_sample": 56320,
+      "confidence": 0
+    },
+    {
+      "word": "是",
+      "start_sample": 56320,
+      "end_sample": 58880,
+      "confidence": 0
+    },
+    {
+      "word": "不",
+      "start_sample": 58880,
+      "end_sample": 60160,
+      "confidence": 0
+    },
+    {
+      "word": "是",
+      "start_sample": 60160,
+      "end_sample": 61440,
+      "confidence": 0
+    },
+    {
+      "word": "福",
+      "start_sample": 61440,
+      "end_sample": 65280,
+      "confidence": 0
+    },
+    {
+      "word": "建",
+      "start_sample": 65280,
+      "end_sample": 69120,
+      "confidence": 0
+    },
+    {
+      "word": "的",
+      "start_sample": 69120,
+      "end_sample": 71680,
+      "confidence": 0
+    },
+    {
+      "word": "我",
+      "start_sample": 74240,
+      "end_sample": 75520,
+      "confidence": 0
+    },
+    {
+      "word": "说",
+      "start_sample": 75520,
+      "end_sample": 76800,
+      "confidence": 0
+    },
+    {
+      "word": "对",
+      "start_sample": 79360,
+      "end_sample": 81920,
+      "confidence": 0
+    },
+    {
+      "word": "啊",
+      "start_sample": 81920,
+      "end_sample": 84480,
+      "confidence": 0
+    },
+    {
+      "word": "然",
+      "start_sample": 89600,
+      "end_sample": 92160,
+      "confidence": 0
+    },
+    {
+      "word": "后",
+      "start_sample": 92160,
+      "end_sample": 93440,
+      "confidence": 0
+    },
+    {
+      "word": "她",
+      "start_sample": 93440,
+      "end_sample": 96000,
+      "confidence": 0
+    },
+    {
+      "word": "说",
+      "start_sample": 96000,
+      "end_sample": 99840,
+      "confidence": 0
+    },
+    {
+      "word": "她",
+      "start_sample": 99840,
+      "end_sample": 102400,
+      "confidence": 0
+    },
+    {
+      "word": "也",
+      "start_sample": 102400,
+      "end_sample": 103680,
+      "confidence": 0
+    },
+    {
+      "word": "是",
+      "start_sample": 103680,
+      "end_sample": 106240,
+      "confidence": 0
+    },
+    {
+      "word": "福",
+      "start_sample": 106240,
+      "end_sample": 110080,
+      "confidence": 0
+    },
+    {
+      "word": "建",
+      "start_sample": 110080,
+      "end_sample": 112640,
+      "confidence": 0
+    },
+    {
+      "word": "的",
+      "start_sample": 112640,
+      "end_sample": 116480,
+      "confidence": 0
+    },
+    {
+      "word": "我",
+      "start_sample": 117760,
+      "end_sample": 119040,
+      "confidence": 0
+    },
+    {
+      "word": "们",
+      "start_sample": 119040,
+      "end_sample": 121600,
+      "confidence": 0
+    },
+    {
+      "word": "就",
+      "start_sample": 121600,
+      "end_sample": 124160,
+      "confidence": 0
+    },
+    {
+      "word": "用",
+      "start_sample": 124160,
+      "end_sample": 125440,
+      "confidence": 0
+    },
+    {
+      "word": "闽",
+      "start_sample": 125440,
+      "end_sample": 129280,
+      "confidence": 0
+    },
+    {
+      "word": "南",
+      "start_sample": 129280,
+      "end_sample": 130560,
+      "confidence": 0
+    },
+    {
+      "word": "话",
+      "start_sample": 130560,
+      "end_sample": 134400,
+      "confidence": 0
+    },
+    {
+      "word": "聊",
+      "start_sample": 134400,
+      "end_sample": 138240,
+      "confidence": 0
+    },
+    {
+      "word": "起",
+      "start_sample": 138240,
+      "end_sample": 140800,
+      "confidence": 0
+    },
+    {
+      "word": "来",
+      "start_sample": 140800,
+      "end_sample": 144640,
+      "confidence": 0
+    },
+    {
+      "word": "了",
+      "start_sample": 144640,
+      "end_sample": 147200,
+      "confidence": 0
+    },
+    {
+      "word": "感",
+      "start_sample": 152320,
+      "end_sample": 153600,
+      "confidence": 0
+    },
+    {
+      "word": "觉",
+      "start_sample": 153600,
+      "end_sample": 156160,
+      "confidence": 0
+    },
+    {
+      "word": "特",
+      "start_sample": 156160,
+      "end_sample": 158720,
+      "confidence": 0
+    },
+    {
+      "word": "别",
+      "start_sample": 158720,
+      "end_sample": 161280,
+      "confidence": 0
+    },
+    {
+      "word": "亲",
+      "start_sample": 161280,
+      "end_sample": 166400,
+      "confidence": 0
+    },
+    {
+      "word": "切",
+      "start_sample": 166400,
+      "end_sample": 170240,
+      "confidence": 0
+    },
+    {
+      "word": "真",
+      "start_sample": 174080,
+      "end_sample": 176640,
+      "confidence": 0
+    },
+    {
+      "word": "的",
+      "start_sample": 176640,
+      "end_sample": 177920,
+      "confidence": 0
+    },
+    {
+      "word": "好",
+      "start_sample": 177920,
+      "end_sample": 180480,
+      "confidence": 0
+    },
+    {
+      "word": "开",
+      "start_sample": 180480,
+      "end_sample": 184320,
+      "confidence": 0
+    },
+    {
+      "word": "心",
+      "start_sample": 184320,
+      "end_sample": 189440,
+      "confidence": 0
+    },
+    {
+      "word": "啊",
+      "start_sample": 189440,
+      "end_sample": 190720,
+      "confidence": 0
+    }
+  ],
+  "timing": {
+    "wall_ms": 26.1322
+  }
+}

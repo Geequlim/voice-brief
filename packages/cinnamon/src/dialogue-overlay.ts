@@ -46,6 +46,7 @@ interface CinnamonLabel extends CinnamonActor {
 		ellipsize: number;
 		line_wrap: boolean;
 		line_wrap_mode: number;
+		set_markup(markup: string): void;
 	};
 	text: string;
 }
@@ -118,6 +119,8 @@ interface DialogueLayout {
 
 type DialoguePhase = 'dialogue' | 'expanding' | 'exiting' | 'holding' | 'idle' | 'introducing';
 type OverlayDialoguePosition = 'bottom' | 'top';
+type KaraokeAlignment = NonNullable<NonNullable<VoiceBriefHookEvent['audio']>['alignment']>;
+type KaraokeState = 'current' | 'past' | 'future';
 
 interface CinnamonMain {
 	keybindingManager: {
@@ -167,6 +170,9 @@ const EXIT_AVATAR_PULSE_DURATION_MS = 120;
 const EXIT_AVATAR_DURATION_MS = 150;
 const EXIT_AVATAR_OVERSHOOT_SCALE = 1.22;
 const DEFAULT_ACCENT_COLOR = '#eb4272';
+const KARAOKE_FUTURE_COLOR = '#aca9b5';
+const KARAOKE_PAST_LIGHTNESS = 0.32;
+const KARAOKE_TICK_MS = 33;
 const AVATAR_LAYOUT_STYLE = 'width: 96px; height: 96px;';
 const HIDE_HOT_KEY_NAME = 'voice-brief-hide-overlay';
 
@@ -181,6 +187,11 @@ class DialogueOverlay {
 	private readonly $textLabel: CinnamonLabel;
 	private $avatarTimeoutId?: number;
 	private $briefId?: string;
+	private $karaokeAlignment?: KaraokeAlignment;
+	private $karaokeStartUs?: number;
+	private $karaokeText?: string;
+	private $karaokeTickId?: number;
+	private $karaokeAccentColor = DEFAULT_ACCENT_COLOR;
 	private readonly $dismissedBriefIds = new Set<string>();
 	private $escapeHotKeyRegistered = false;
 	private $layout?: DialogueLayout;
@@ -297,6 +308,7 @@ class DialogueOverlay {
 		}
 		if (event.event === 'playback.started') {
 			this.$pendingBriefIds.delete(event.briefId);
+			if (event.briefId === this.$briefId) this.$startKaraoke();
 			return;
 		}
 		if (isTerminalEvent) this.$handleTerminalEvent(event.briefId);
@@ -314,6 +326,7 @@ class DialogueOverlay {
 
 	destroy(): void {
 		this.$clearTimers();
+		this.$resetKaraoke();
 		this.$briefId = undefined;
 		this.$dismissedBriefIds.clear();
 		this.$pendingBriefIds.clear();
@@ -556,6 +569,7 @@ class DialogueOverlay {
 	private $handleTerminalEvent(briefId: string): void {
 		this.$removePendingBrief(briefId);
 		if (briefId !== this.$briefId) return;
+		this.$stopKaraoke();
 		if (this.$pendingBriefIds.size === 0) {
 			this.$hide(briefId);
 			return;
@@ -581,6 +595,7 @@ class DialogueOverlay {
 	private $hide(briefId: string): void {
 		if (briefId !== this.$briefId) return;
 		this.$clearTimers();
+		this.$stopKaraoke();
 		this.$phase = 'exiting';
 		this.$stopTransitions();
 		this.$disableEscapeHotKey();
@@ -688,11 +703,14 @@ class DialogueOverlay {
 		this.$root.scale_y = 1;
 		this.$briefId = undefined;
 		this.$layout = undefined;
+		this.$resetKaraoke();
 		this.$phase = 'idle';
 	}
 
 	private $configureLayout(event: VoiceBriefHookEvent): boolean {
+		this.$resetKaraoke();
 		const accentColor = this.$resolveAccentColor(event.persona?.color);
+		this.$karaokeAccentColor = accentColor;
 		const personaName = event.persona?.name ?? 'Voice Brief';
 		const metadata = [event.source?.agent, event.source?.model]
 			.filter((value): value is string => value !== undefined)
@@ -704,7 +722,9 @@ class DialogueOverlay {
 		this.$contextLabel.text = contextText;
 		if (contextText) this.$contextLabel.show();
 		else this.$contextLabel.hide();
-		this.$textLabel.text = event.brief.text;
+		this.$karaokeText = event.brief.text;
+		this.$karaokeAlignment = event.audio?.alignment;
+		this.$renderKaraokeText();
 		this.$dialogueHideButton.show();
 		const hasAvatar = this.$setAvatar(event.persona?.avatar);
 		const [, measuredAvatarWidth] = this.$avatar.get_preferred_width(-1);
@@ -814,6 +834,112 @@ class DialogueOverlay {
 			DialogueGLib.Source.remove(this.$avatarTimeoutId);
 			this.$avatarTimeoutId = undefined;
 		}
+	}
+
+	private $startKaraoke(): void {
+		if (!this.$karaokeAlignment || !this.$karaokeText) return;
+		this.$stopKaraoke();
+		this.$karaokeStartUs = DialogueGLib.get_monotonic_time();
+		this.$renderKaraokeText();
+		this.$karaokeTickId = DialogueGLib.timeout_add(DialogueGLib.PRIORITY_DEFAULT, KARAOKE_TICK_MS, () => {
+			if (!this.$karaokeStartUs || this.$phase === 'idle' || this.$phase === 'exiting') return DialogueGLib.SOURCE_REMOVE;
+			this.$renderKaraokeText();
+			return DialogueGLib.SOURCE_CONTINUE;
+		});
+	}
+
+	private $stopKaraoke(): void {
+		if (this.$karaokeTickId !== undefined) {
+			DialogueGLib.Source.remove(this.$karaokeTickId);
+			this.$karaokeTickId = undefined;
+		}
+		this.$karaokeStartUs = undefined;
+	}
+
+	private $resetKaraoke(): void {
+		this.$stopKaraoke();
+		this.$karaokeAlignment = undefined;
+		this.$karaokeText = undefined;
+	}
+
+	private $renderKaraokeText(): void {
+		const text = this.$karaokeText;
+		const alignment = this.$karaokeAlignment;
+		if (!text || !alignment || !this.$isRenderableAlignment(text, alignment)) {
+			this.$textLabel.set_style('');
+			this.$textLabel.text = text ?? '';
+			return;
+		}
+		const playbackMs = this.$karaokeStartUs === undefined
+			? undefined
+			: (DialogueGLib.get_monotonic_time() - this.$karaokeStartUs) / 1_000;
+		let textOffset = 0;
+		let precedingState: KaraokeState = 'future';
+		let markup = '';
+		let cueOffset = 0;
+		const firstCue = alignment.cues[0]!;
+		if (firstCue.startChar === 0) {
+			const firstState = this.$getKaraokeState(firstCue, playbackMs);
+			this.$textLabel.set_style(`color: ${this.$getKaraokeColor(firstState, firstCue, playbackMs)};`);
+			markup = this.$escapeMarkup(text.slice(0, firstCue.endChar));
+			textOffset = firstCue.endChar;
+			precedingState = firstState === 'current' ? 'future' : firstState;
+			cueOffset = 1;
+		} else {
+			this.$textLabel.set_style(`color: ${KARAOKE_FUTURE_COLOR};`);
+		}
+		for (const cue of alignment.cues.slice(cueOffset)) {
+			markup += this.$renderKaraokeSpan(text.slice(textOffset, cue.startChar), precedingState);
+			const state = this.$getKaraokeState(cue, playbackMs);
+			markup += this.$renderKaraokeSpan(text.slice(cue.startChar, cue.endChar), state, cue, playbackMs);
+			textOffset = cue.endChar;
+			precedingState = state === 'current' ? 'future' : state;
+		}
+		markup += this.$renderKaraokeSpan(text.slice(textOffset), precedingState);
+		this.$textLabel.clutter_text.set_markup(markup);
+	}
+
+	private $isRenderableAlignment(text: string, alignment: KaraokeAlignment): boolean {
+		let previousEndChar = 0;
+		for (const cue of alignment.cues) {
+			if (cue.startChar < previousEndChar || cue.endChar > text.length || text.slice(cue.startChar, cue.endChar) !== cue.text) return false;
+			previousEndChar = cue.endChar;
+		}
+		return alignment.cues.length > 0;
+	}
+
+	private $getKaraokeState(cue: KaraokeAlignment['cues'][number], playbackMs?: number): KaraokeState {
+		if (playbackMs === undefined || playbackMs < cue.startMs) return 'future';
+		if (playbackMs >= cue.endMs) return 'past';
+		return 'current';
+	}
+
+	private $renderKaraokeSpan(text: string, state: KaraokeState, cue?: KaraokeAlignment['cues'][number], playbackMs?: number): string {
+		if (!text) return '';
+		const escaped = this.$escapeMarkup(text);
+		if (state !== 'current') return `<span foreground="${this.$getKaraokeColor(state, cue, playbackMs)}">${escaped}</span>`;
+		return `<b><span foreground="${this.$getKaraokeColor(state, cue, playbackMs)}">${escaped}</span></b>`;
+	}
+
+	private $getKaraokeColor(state: KaraokeState, cue?: KaraokeAlignment['cues'][number], playbackMs?: number): string {
+		if (state === 'past') return this.$interpolateColor(this.$karaokeAccentColor, '#ffffff', KARAOKE_PAST_LIGHTNESS);
+		if (state === 'future') return KARAOKE_FUTURE_COLOR;
+		const duration = Math.max((cue?.endMs ?? 0) - (cue?.startMs ?? 0), 1);
+		const progress = Math.min(Math.max(((playbackMs ?? 0) - (cue?.startMs ?? 0)) / duration, 0), 1);
+		return this.$interpolateColor('#ffffff', this.$karaokeAccentColor, progress);
+	}
+
+	private $escapeMarkup(text: string): string {
+		return text.replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;').replaceAll('"', '&quot;').replaceAll("'", '&apos;');
+	}
+
+	private $interpolateColor(from: string, to: string, progress: number): string {
+		const channels = [0, 1, 2].map(index => {
+			const start = Number.parseInt(from.slice(index * 2 + 1, index * 2 + 3), 16);
+			const end = Number.parseInt(to.slice(index * 2 + 1, index * 2 + 3), 16);
+			return Math.round(start + (end - start) * progress).toString(16).padStart(2, '0');
+		});
+		return `#${channels.join('')}`;
 	}
 
 	private $resolveAccentColor(color?: string): string {

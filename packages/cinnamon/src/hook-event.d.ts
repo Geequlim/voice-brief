@@ -38,6 +38,16 @@ interface VoiceBriefHookEvent {
 		color?: string;
 	};
 	audio?: {
+		alignment?: {
+			source: string;
+			cues: Array<{
+				text: string;
+				startMs: number;
+				endMs: number;
+				startChar: number;
+				endChar: number;
+			}>;
+		};
 		provider: string;
 		source: AudioSource;
 		durationMs?: number;

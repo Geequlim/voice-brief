@@ -203,6 +203,31 @@ describe('VoiceBrief Runtime Hook 事件', () => {
 		});
 	});
 
+	test('provider 返回的 alignment 会完整传递给播放 Hook 事件', async () => {
+		const alignment = {
+			source: 'fixture',
+			cues: [{ text: '任', startMs: 0, endMs: 120, startChar: 0, endChar: 1 }],
+		};
+		const runtime = createRuntime({
+			synthesize: vi.fn().mockResolvedValue({
+				audioFile: '/tmp/voice-brief/audio.mp3',
+				provider: 'mock',
+				source: 'provider',
+				alignment,
+			}),
+		});
+		const admission = await runtime.service.admitSpeech('brief-1', { kind: 'final', text: '任务完成' });
+		if (admission.status !== 'admitted') throw new Error('测试预期任务通过准入');
+		const start = await runtime.service.startSpeech(admission.speech);
+		const prepared = await start.completion;
+		if (!prepared) throw new Error('测试预期音频准备成功');
+		await runtime.service.queueSpeech(prepared);
+		await runtime.service.playSpeech(prepared);
+
+		expect(runtime.events.filter(event => event.audio).every(event => event.audio?.alignment)).toBe(true);
+		expect(runtime.events.find(event => event.event === 'playback.ready')?.audio?.alignment).toEqual(alignment);
+	});
+
 	test('合成失败只发送 audio.failed 并记录 provider 错误', async () => {
 		const runtime = createRuntime({ synthesize: vi.fn().mockRejectedValue(new Error('synthesis failed')) });
 		const admission = await runtime.service.admitSpeech('brief-1', { kind: 'final', text: '任务完成' });

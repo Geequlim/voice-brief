@@ -12,6 +12,7 @@ const APP_RULE_ID = 'sink-input-by-application-name:TestApp';
 interface MockStream {
 	index: number;
 	volume: number;
+	applicationName?: string;
 	restoreId?: string;
 }
 
@@ -28,14 +29,20 @@ class TestDuckingService extends VoiceBriefDuckingService {
 	protected override async runPactl(args: string[]) {
 		this.calls.push(args);
 		if (args[0] === '--format=json') {
-			return JSON.stringify(this.streams.map(stream => ({
-				index: stream.index,
-				volume: {
-					'front-left': { value: stream.volume },
-					'front-right': { value: stream.volume },
-				},
-				...(stream.restoreId ? { properties: { 'module-stream-restore.id': stream.restoreId } } : {}),
-			})));
+			return JSON.stringify(this.streams.map(stream => {
+				const properties = {
+					...(stream.applicationName ? { 'application.name': stream.applicationName } : {}),
+					...(stream.restoreId ? { 'module-stream-restore.id': stream.restoreId } : {}),
+				};
+				return {
+					index: stream.index,
+					volume: {
+						'front-left': { value: stream.volume },
+						'front-right': { value: stream.volume },
+					},
+					...(Object.keys(properties).length > 0 ? { properties } : {}),
+				};
+			}));
 		}
 		if (args[0] === 'set-sink-input-volume') {
 			const stream = this.streams.find(candidate => candidate.index === Number(args[1]));
@@ -109,6 +116,26 @@ describe('VoiceBriefDuckingService', () => {
 			expect(service.calls).toContainEqual(['set-sink-input-volume', '42', '10000', '10000']);
 			expect(service.streams[0]?.volume).toBe(10000);
 			await expect(fs.access(path.join(root, 'ducking-session.json'))).rejects.toThrow();
+		} finally {
+			await fs.rm(root, { recursive: true, force: true });
+		}
+	});
+
+	test.runIf(process.platform === 'linux')('Cinnamon KTV 冒烟播放器不会被压低或写入恢复日志', async () => {
+		const root = await fs.mkdtemp(path.join(os.tmpdir(), 'voice-brief-ducking-'));
+		try {
+			const service = new TestDuckingService({} as VoiceBriefRuntimeModule);
+			service.streams = [
+				{ index: 42, volume: 10000, applicationName: 'voice-brief-cinnamon-smoke' },
+				{ index: 43, volume: 10000 },
+			];
+
+			await service.playWithDucking(createPaths(root), createConfig(), async () => undefined);
+
+			expect(service.calls).not.toContainEqual(['set-sink-input-volume', '42', '5012', '5012']);
+			expect(service.calls).not.toContainEqual(['set-sink-input-volume', '42', '10000', '10000']);
+			expect(service.calls).toContainEqual(['set-sink-input-volume', '43', '5012', '5012']);
+			expect(service.calls).toContainEqual(['set-sink-input-volume', '43', '10000', '10000']);
 		} finally {
 			await fs.rm(root, { recursive: true, force: true });
 		}

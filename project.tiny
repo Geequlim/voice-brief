@@ -35,6 +35,9 @@ develop:
             - name: queue
               description: 展示连续播报原位交接与内容替换强调
               command: yarn workspace @tinyaxis/voice-brief-cinnamon smoke queue
+            - name: karaoke
+              description: 播放 fixture 音频并展示逐字 KTV 高亮
+              command: yarn workspace @tinyaxis/voice-brief-cinnamon smoke karaoke
     - name: lint
       description: 静态代码分析
       tooltip: 执行 Oxlint / ESLint / 产物与工程卫生检查

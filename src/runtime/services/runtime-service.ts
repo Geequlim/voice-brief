@@ -114,6 +114,7 @@ export class VoiceBriefRuntimeService {
 			stage = 'metadata';
 			const audioDurationMs = result.audioDurationMs ?? await this.module.audioMetadataService.getAudioDurationMs(result.audioFile);
 			const audio: VoiceBriefHookAudio = {
+				alignment: result.alignment,
 				provider: result.provider,
 				source: result.source,
 				durationMs: audioDurationMs,

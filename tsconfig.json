@@ -36,6 +36,6 @@
 		"noImplicitThis": false,
 		"types": ["node"]
 	},
-	"include": ["src/**/*.ts", "src/**/*.d.ts", "tests/**/*.ts", "vitest.config.mts", "rspack.config.mts", "eslint.config.mts", "oxlint.config.mts", "tools/**/*.mts"],
+		"include": ["src/**/*.ts", "src/**/*.mts", "src/**/*.d.ts", "tests/**/*.ts", "vitest.config.mts", "rspack.config.mts", "eslint.config.mts", "oxlint.config.mts", "tools/**/*.mts"],
 	"exclude": ["node_modules", "packages"]
 }

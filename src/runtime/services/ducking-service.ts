@@ -12,6 +12,7 @@ import type { VoiceBriefRuntimeModule } from '../index';
 
 // PipeWire 会把按应用记忆的音量按百分比量化，压低值回流后和写入值可能有小幅偏差，匹配泄漏时按 1% 容差比较
 const DUCKED_VOLUME_MATCH_TOLERANCE = 0.01;
+const CINNAMON_SMOKE_APPLICATION_NAME = 'voice-brief-cinnamon-smoke';
 
 export class VoiceBriefDuckingService {
 	constructor(readonly module: VoiceBriefRuntimeModule) {}
@@ -100,7 +101,7 @@ export class VoiceBriefDuckingService {
 		const attenuationFactor = 10 ** (-config.playback.ducking.attenuationDb / 60);
 		return {
 			pid: process.pid,
-			streams: sinkInputs.filter(input => !input.corked).map(input => {
+			streams: sinkInputs.filter(input => !input.corked && !this.isDuckingExcluded(input)).map(input => {
 				const originalVolumes = this.streamVolumes(input);
 				return {
 					index: input.index,
@@ -279,6 +280,10 @@ export class VoiceBriefDuckingService {
 
 	private streamVolumes(input: PactlSinkInput) {
 		return Object.values(input.volume).map(channel => channel.value);
+	}
+
+	private isDuckingExcluded(input: PactlSinkInput) {
+		return input.properties?.['application.name'] === CINNAMON_SMOKE_APPLICATION_NAME;
 	}
 
 	private sameVolumes(left: number[], right: number[], relativeTolerance = 0) {

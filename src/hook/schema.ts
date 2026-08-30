@@ -8,6 +8,19 @@ const BriefKindSchema = Type.Union([Type.Literal('final'), Type.Literal('progres
 const ProgressPrioritySchema = Type.Union([Type.Literal('normal'), Type.Literal('high')]);
 const AudioSourceSchema = Type.Union([Type.Literal('cache'), Type.Literal('provider')]);
 
+export const SpeechAlignmentCueSchema = Type.Object({
+	text: Type.String({ minLength: 1 }),
+	startMs: Type.Number({ minimum: 0 }),
+	endMs: Type.Number({ minimum: 0 }),
+	startChar: Type.Integer({ minimum: 0 }),
+	endChar: Type.Integer({ minimum: 0 }),
+}, { additionalProperties: false });
+
+export const SpeechAlignmentSchema = Type.Object({
+	source: Type.String({ minLength: 1 }),
+	cues: Type.Array(SpeechAlignmentCueSchema),
+}, { additionalProperties: false });
+
 export const VoiceBriefHookEventNameSchema = Type.Union([
 	Type.Literal('brief.skipped'),
 	Type.Literal('audio.preparing'),
@@ -48,6 +61,7 @@ export const VoiceBriefHookPersonaSchema = Type.Object({
 }, { additionalProperties: false });
 
 export const VoiceBriefHookAudioSchema = Type.Object({
+	alignment: Type.Optional(SpeechAlignmentSchema),
 	provider: Type.String({ minLength: 1 }),
 	source: AudioSourceSchema,
 	durationMs: Type.Optional(Type.Number({ minimum: 0 })),
@@ -96,3 +110,5 @@ export type VoiceBriefHookEventName = Static<typeof VoiceBriefHookEventNameSchem
 export type VoiceBriefHookPersona = Static<typeof VoiceBriefHookPersonaSchema>;
 export type VoiceBriefHookSkipReason = Static<typeof VoiceBriefHookSkipReasonSchema>;
 export type VoiceBriefHookSource = Static<typeof VoiceBriefHookSourceSchema>;
+export type SpeechAlignment = Static<typeof SpeechAlignmentSchema>;
+export type SpeechAlignmentCue = Static<typeof SpeechAlignmentCueSchema>;

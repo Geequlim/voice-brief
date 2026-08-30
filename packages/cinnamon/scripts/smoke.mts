@@ -1,10 +1,14 @@
+import { spawn } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
+import { once } from 'node:events';
 import { access, readFile } from 'node:fs/promises';
 import { createConnection } from 'node:net';
 import { homedir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { createSpeechAlignment } from '../../../src/runtime/alignment.mts';
 
-type SmokeScenarioName = 'all' | 'dialogue' | 'entrance' | 'multiline' | 'no-session' | 'queue';
+type SmokeScenarioName = 'all' | 'dialogue' | 'entrance' | 'karaoke' | 'multiline' | 'no-session' | 'queue';
 type HookEventName =
 	| 'playback.completed'
 	| 'playback.queued'
@@ -24,10 +28,27 @@ interface SmokePersona {
 	color?: string;
 }
 
+interface AlignmentFixture {
+	text: string;
+	words: Array<{
+		word: string;
+		start_sample: number;
+		end_sample: number;
+	}>;
+}
+
 const DEFAULT_PERSONA_PATH = join(homedir(), '.config', 'voice-brief', 'personas', '甜妹助理.md');
-const DEFAULT_SOCKET_PATH = join(process.env.XDG_RUNTIME_DIR ?? `/run/user/${process.getuid()}`, 'voice-brief', 'cinnamon.sock');
+const DEFAULT_SOCKET_PATH = join(process.env.XDG_RUNTIME_DIR ?? `/run/user/${process.getuid?.() ?? 0}`, 'voice-brief', 'cinnamon.sock');
+const WORKSPACE_DIRECTORY = fileURLToPath(new URL('../../..', import.meta.url));
+const FIXTURE_DIRECTORY = join(WORKSPACE_DIRECTORY, 'tests', 'fixtures');
 const scenarioName = process.argv[2] ?? 'all';
 const scenarios: ReadonlyArray<SmokeScenario> = [
+	{
+		name: 'karaoke',
+		description: '暂存音频与逐字时间轴的完整 KTV 冒烟测试',
+		text: '',
+		session: 'KTV 逐字 fixture 冒烟测试',
+	},
 	{
 		name: 'entrance',
 		description: '播放就绪后的头像与完整对话入场动画',
@@ -60,14 +81,16 @@ const scenarios: ReadonlyArray<SmokeScenario> = [
 ];
 
 if (!isSmokeScenarioName(scenarioName)) {
-	throw new Error(`未知场景 ${scenarioName}，可用场景：all、entrance、dialogue、multiline、no-session、queue`);
+	throw new Error(`未知场景 ${scenarioName}，可用场景：all、entrance、dialogue、karaoke、multiline、no-session、queue`);
 }
 
 const socketPath = process.env.VOICE_BRIEF_CINNAMON_SOCKET ?? DEFAULT_SOCKET_PATH;
 const personaPath = process.env.VOICE_BRIEF_SMOKE_PERSONA ?? DEFAULT_PERSONA_PATH;
 await access(socketPath);
 const persona = await loadPersona(personaPath);
-const selectedScenarios = scenarioName === 'all' ? scenarios : scenarios.filter(scenario => scenario.name === scenarioName);
+const selectedScenarios = scenarioName === 'all'
+	? scenarios.filter(scenario => scenario.name !== 'karaoke')
+	: scenarios.filter(scenario => scenario.name === scenarioName);
 
 for (const [index, scenario] of selectedScenarios.entries()) {
 	console.log(`[voice-brief] smoke ${scenario.name}: ${scenario.description}`);
@@ -76,7 +99,7 @@ for (const [index, scenario] of selectedScenarios.entries()) {
 }
 
 function isSmokeScenarioName(value: string): value is SmokeScenarioName {
-	return ['all', 'entrance', 'dialogue', 'multiline', 'no-session', 'queue'].includes(value);
+	return ['all', 'entrance', 'dialogue', 'karaoke', 'multiline', 'no-session', 'queue'].includes(value);
 }
 
 async function loadPersona(path: string): Promise<SmokePersona> {
@@ -103,6 +126,10 @@ function readFrontmatterField(frontmatter: string, field: string): string | unde
 }
 
 async function runScenario(socketPath: string, persona: SmokePersona, scenario: SmokeScenario): Promise<void> {
+	if (scenario.name === 'karaoke') {
+		await runKaraokeScenario(socketPath, persona, scenario);
+		return;
+	}
 	if (scenario.name === 'queue') {
 		await runQueueScenario(socketPath, persona, scenario);
 		return;
@@ -140,6 +167,72 @@ async function runScenario(socketPath: string, persona: SmokePersona, scenario: 
 	await delay(1500);
 	await send('playback.started');
 	await delay(5000);
+	await send('playback.completed');
+	await delay(350);
+}
+
+async function runKaraokeScenario(socketPath: string, persona: SmokePersona, scenario: SmokeScenario): Promise<void> {
+	const [text, rawFixture] = await Promise.all([
+		readFile(join(FIXTURE_DIRECTORY, '甜妹助理.txt'), 'utf8'),
+		readFile(join(FIXTURE_DIRECTORY, '甜妹助理.json'), 'utf8'),
+	]);
+	const fixture = JSON.parse(rawFixture) as AlignmentFixture;
+	if (fixture.text !== text.trim()) throw new Error('KTV fixture 的 JSON 与 TXT 原文不一致');
+	const alignment = createSpeechAlignment({
+		source: 'fixture',
+		text: fixture.text,
+		sampleRate: 16_000,
+		cues: fixture.words.map(word => ({
+			text: word.word,
+			startSample: word.start_sample,
+			endSample: word.end_sample,
+		})),
+	});
+	const briefId = randomUUID();
+	const audio = {
+		provider: 'fixture',
+		source: 'provider' as const,
+		durationMs: alignment.cues.at(-1)?.endMs ?? 0,
+		alignment,
+	};
+	let sequence = 1;
+	const send = async (event: HookEventName): Promise<void> => {
+		await sendEvent(socketPath, {
+			protocol: 'voice-brief.hook-event',
+			version: 2,
+			eventId: randomUUID(),
+			occurredAt: new Date().toISOString(),
+			briefId,
+			event,
+			sequence,
+			brief: { text: fixture.text, kind: 'test', priority: 'normal' },
+			source: { agent: 'Codex', model: 'Fixture', session: scenario.session },
+			persona,
+			audio,
+		});
+		sequence += 1;
+	};
+
+	await send('playback.queued');
+	await send('playback.ready');
+	await delay(1500);
+	const player = process.env.VOICE_BRIEF_KARAOKE_PLAYER ?? 'mpv';
+	const child = spawn(player, [
+		'--no-video',
+		'--really-quiet',
+		'--keep-open=no',
+		'--audio-client-name=voice-brief-cinnamon-smoke',
+		join(FIXTURE_DIRECTORY, '甜妹助理.mp3'),
+	], {
+		stdio: 'ignore',
+	});
+	await Promise.race([
+		once(child, 'spawn'),
+		once(child, 'error').then(([error]) => Promise.reject(error)),
+	]);
+	await send('playback.started');
+	const [exitCode] = await once(child, 'close') as [number | null];
+	if (exitCode !== 0) throw new Error(`${player} 播放 fixture 失败，退出码: ${exitCode ?? 'unknown'}`);
 	await send('playback.completed');
 	await delay(350);
 }

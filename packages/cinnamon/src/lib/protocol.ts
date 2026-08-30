@@ -58,6 +58,32 @@ function validateAudio(value: unknown): void {
 	if (audio['durationMs'] !== undefined && (typeof audio['durationMs'] !== 'number' || audio['durationMs'] < 0)) {
 		throw new Error('audio.durationMs must be a non-negative number');
 	}
+	validateAlignment(audio['alignment']);
+}
+
+function validateAlignment(value: unknown): void {
+	if (value === undefined) return;
+	const alignment = requireRecord(value, 'audio.alignment');
+	requireString(alignment['source'], 'audio.alignment.source');
+	if (!Array.isArray(alignment['cues'])) throw new Error('audio.alignment.cues must be an array');
+	let previousEndMs = 0;
+	let previousEndChar = 0;
+	for (const [index, value] of alignment['cues'].entries()) {
+		const cue = requireRecord(value, `audio.alignment.cues[${index}]`);
+		requireString(cue['text'], `audio.alignment.cues[${index}].text`);
+		const startMs = cue['startMs'];
+		const endMs = cue['endMs'];
+		const startChar = cue['startChar'];
+		const endChar = cue['endChar'];
+		if (typeof startMs !== 'number' || typeof endMs !== 'number' || !Number.isFinite(startMs) || !Number.isFinite(endMs) || startMs < previousEndMs || endMs < startMs) {
+			throw new Error(`audio.alignment.cues[${index}] time is invalid`);
+		}
+		if (typeof startChar !== 'number' || typeof endChar !== 'number' || !Number.isInteger(startChar) || !Number.isInteger(endChar) || startChar < previousEndChar || endChar < startChar) {
+			throw new Error(`audio.alignment.cues[${index}] range is invalid`);
+		}
+		previousEndMs = endMs;
+		previousEndChar = endChar;
+	}
 }
 
 function validateError(value: unknown): void {

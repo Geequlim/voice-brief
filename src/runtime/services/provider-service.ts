@@ -123,6 +123,7 @@ export class VoiceBriefProviderService {
 			await this.module.cacheService.storeCacheFile(result.audioFile, cacheFile);
 			await this.removeTempFile(result.audioFile);
 			return {
+				alignment: result.alignment,
 				audioFile: cacheFile,
 				provider: result.provider,
 				audioDurationMs: result.audioDurationMs,
