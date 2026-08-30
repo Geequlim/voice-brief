@@ -91,27 +91,40 @@ develop:
           command: yarn workspace @tinyaxis/voice-brief-cinnamon build
 
 publish:
-  description: 打包与发布
-  tooltip: 组装 npm staging 与发布（发布需要维护者授权）
+  description: 构建打包与发布
+  tooltip: 自动编译后组装 npm staging 与发布（发布需要维护者授权）
   actions:
     - name: package
-      description: 组装全部 npm staging 目录
+      description: 编译并组装全部 npm staging 目录
       command:
+        - yarn tiny develop/compile
         - node tools/package-cli.mts
         - node tools/package-cinnamon.mts
       actions:
         - name: cli
-          description: 组装并校验 @tinyaxis/voice-brief staging
-          command: node tools/package-cli.mts
+          description: 编译、打包并校验 @tinyaxis/voice-brief staging
+          command:
+            - yarn tiny develop/compile/cli
+            - node tools/package-cli.mts
         - name: cinnamon
-          description: 组装并校验 @tinyaxis/voice-brief-cinnamon staging
-          command: node tools/package-cinnamon.mts
+          description: 编译、打包并校验 @tinyaxis/voice-brief-cinnamon staging
+          command:
+            - yarn tiny develop/compile/cinnamon
+            - node tools/package-cinnamon.mts
     - name: cli
-      description: 发布 @tinyaxis/voice-brief 到 npm（需要维护者授权）
-      command: node tools/publish.mts dist/npm/voice-brief
+      description: 编译打包并发布 @tinyaxis/voice-brief 到 npm（需要维护者授权）
+      command:
+        - yarn tiny develop/compile/cli
+        - node tools/package-cli.mts
+        - node tools/check-package.mts
+        - node tools/publish.mts dist/npm/voice-brief
     - name: cinnamon
-      description: 发布 @tinyaxis/voice-brief-cinnamon 到 npm（需要维护者授权）
-      command: node tools/publish.mts dist/npm/voice-brief-cinnamon
+      description: 编译打包并发布 @tinyaxis/voice-brief-cinnamon 到 npm（需要维护者授权）
+      command:
+        - yarn tiny develop/compile/cinnamon
+        - node tools/package-cinnamon.mts
+        - node tools/check-package.mts
+        - node tools/publish.mts dist/npm/voice-brief-cinnamon
 
 hooks:
   fix-worktree:

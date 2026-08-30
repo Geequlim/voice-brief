@@ -33,10 +33,7 @@ jobs:
       - name: Cinnamon 扩展测试
         run: yarn tiny test/cinnamon
 
-      - name: 编译生产产物
-        run: yarn tiny compile
-
-      - name: 组装 npm staging
+      - name: 编译、组装 npm staging
         run: yarn tiny publish/package
 
       - name: 打包产物验证
