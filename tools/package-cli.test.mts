@@ -91,8 +91,10 @@ describe('CLI 打包验证', () => {
 		expect(statusJson.config?.enabled).toBe(true);
 
 		const doctor = smoke(['doctor']);
-		expect(doctor.status).toBe(0);
-		expect(doctor.stdout.length).toBeGreaterThan(0);
+		// 裸环境可能没有任何音频播放器：doctor 会照常输出报告，并以退出码 1 表示环境不完整
+		expect([0, 1]).toContain(doctor.status);
+		expect(doctor.stdout).toContain('Config:');
+		expect(doctor.stdout).toContain('edge:');
 
 		fs.rmSync(home, { recursive: true, force: true });
 	}, 300_000);
