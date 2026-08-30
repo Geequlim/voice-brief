@@ -143,10 +143,13 @@ yarn tiny lint/typecheck  # TypeScript 类型检查
 yarn tiny test            # 单元与集成测试
 yarn tiny test/cinnamon   # Cinnamon 扩展 GJS 测试
 yarn tiny compile         # 生产构建
-yarn tiny package         # 组装 npm staging
-yarn tiny test/package    # tarball 隔离安装验证
-yarn tiny develop/cli     # watch 模式构建
 yarn tiny fix-worktree    # 规范化工作区未提交文件
+
+# 打包与发布（独立分组）
+yarn tiny publish/package         # 组装 npm staging
+yarn tiny publish/package/cli     # 仅组装 CLI staging
+yarn tiny test/package            # tarball 隔离安装验证
+yarn tiny publish/cli             # 发布到 npm（需要维护者授权）
 ```
 
 提交代码前 pre-commit 钩子会自动执行 lockfile 校验与 lint 修复。

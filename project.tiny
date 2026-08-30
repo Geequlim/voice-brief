@@ -3,7 +3,7 @@ develop:
   actions:
     - name: cli
       description: 以 watch 模式构建并调试 CLI
-      command: yarn rspack watch
+      command: yarn rspack --watch
     - name: cinnamon
       description: 构建、安装并重载 Cinnamon 扩展
       command:
@@ -27,7 +27,7 @@ develop:
               description: 展示标准完整对话展开
               command: yarn workspace @tinyaxis/voice-brief-cinnamon smoke dialogue
             - name: multiline
-              description: 展示显式换行与长文本高度
+              description: 展示显式换行与长文本自适应高度
               command: yarn workspace @tinyaxis/voice-brief-cinnamon smoke multiline
             - name: no-session
               description: 展示无会话名称时的模型信息回退
@@ -37,7 +37,7 @@ develop:
               command: yarn workspace @tinyaxis/voice-brief-cinnamon smoke queue
     - name: lint
       description: 静态代码分析
-      tooltip: 执行 Oxlint / ESLint / 零内部依赖检查
+      tooltip: 执行 Oxlint / ESLint / 产物与工程卫生检查
       command:
         - yarn oxlint -c oxlint.config.mts -f stylish src tests tools packages/cinnamon/src packages/cinnamon/tests
         - yarn eslint .
@@ -78,8 +78,8 @@ develop:
     - name: compile
       description: 编译全部生产产物
       command:
-        - yarn tiny compile/cli
-        - yarn tiny compile/cinnamon
+        - yarn tiny develop/compile/cli
+        - yarn tiny develop/compile/cinnamon
       actions:
         - name: cli
           description: 类型检查并构建 CLI 生产产物
@@ -89,6 +89,11 @@ develop:
         - name: cinnamon
           description: 构建 Cinnamon 扩展产物
           command: yarn workspace @tinyaxis/voice-brief-cinnamon build
+
+publish:
+  description: 打包与发布
+  tooltip: 组装 npm staging 与发布（发布需要维护者授权）
+  actions:
     - name: package
       description: 组装全部 npm staging 目录
       command:
@@ -101,15 +106,12 @@ develop:
         - name: cinnamon
           description: 组装并校验 @tinyaxis/voice-brief-cinnamon staging
           command: node tools/package-cinnamon.mts
-    - name: publish
-      description: 发布到 npm 仓库（需要维护者授权）
-      actions:
-        - name: cli
-          description: 发布 @tinyaxis/voice-brief
-          command: yarn npm publish dist/npm/voice-brief
-        - name: cinnamon
-          description: 发布 @tinyaxis/voice-brief-cinnamon
-          command: yarn npm publish dist/npm/voice-brief-cinnamon
+    - name: cli
+      description: 发布 @tinyaxis/voice-brief 到 npm（需要维护者授权）
+      command: yarn npm publish dist/npm/voice-brief
+    - name: cinnamon
+      description: 发布 @tinyaxis/voice-brief-cinnamon 到 npm（需要维护者授权）
+      command: yarn npm publish dist/npm/voice-brief-cinnamon
 
 hooks:
   fix-worktree:

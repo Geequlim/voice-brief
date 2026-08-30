@@ -37,7 +37,7 @@ jobs:
         run: yarn tiny compile
 
       - name: 组装 npm staging
-        run: yarn tiny package
+        run: yarn tiny publish/package
 
       - name: 打包产物验证
         run: |

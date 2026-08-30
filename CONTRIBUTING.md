@@ -27,7 +27,7 @@ yarn tiny list
 | `yarn tiny test` | 单元与集成测试 |
 | `yarn tiny test/cinnamon` | Cinnamon 扩展 GJS 测试 |
 | `yarn tiny compile` | 生产构建（CLI + Cinnamon） |
-| `yarn tiny package` | 组装 npm staging 并校验 |
+| `yarn tiny publish/package` | 组装 npm staging 并校验 |
 | `yarn tiny test/package/cli` | CLI tarball 隔离安装验证 |
 | `yarn tiny develop/cli` | watch 模式构建 |
 
