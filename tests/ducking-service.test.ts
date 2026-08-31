@@ -121,6 +121,26 @@ describe('VoiceBriefDuckingService', () => {
 		}
 	});
 
+	test.runIf(process.platform === 'linux')('voice-brief 自身的播放流不会被压低', async () => {
+		const root = await fs.mkdtemp(path.join(os.tmpdir(), 'voice-brief-ducking-'));
+		try {
+			const service = new TestDuckingService({} as VoiceBriefRuntimeModule);
+			service.streams = [
+				{ index: 42, volume: 10000, applicationName: 'voice-brief' },
+				{ index: 43, volume: 10000 },
+			];
+
+			await service.playWithDucking(createPaths(root), createConfig(), async () => undefined);
+
+			expect(service.calls).not.toContainEqual(['set-sink-input-volume', '42', '5012', '5012']);
+			expect(service.calls).not.toContainEqual(['set-sink-input-volume', '42', '10000', '10000']);
+			expect(service.calls).toContainEqual(['set-sink-input-volume', '43', '5012', '5012']);
+			expect(service.calls).toContainEqual(['set-sink-input-volume', '43', '10000', '10000']);
+		} finally {
+			await fs.rm(root, { recursive: true, force: true });
+		}
+	});
+
 	test.runIf(process.platform === 'linux')('Cinnamon KTV 冒烟播放器不会被压低或写入恢复日志', async () => {
 		const root = await fs.mkdtemp(path.join(os.tmpdir(), 'voice-brief-ducking-'));
 		try {

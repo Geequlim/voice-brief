@@ -5,6 +5,10 @@ import type { VoicePersona } from '../persona/types';
 
 export const VOICE_BRIEF_DAEMON_ARGUMENT = '--voice-brief-daemon';
 
+// 播放器进程上报给 PulseAudio/PipeWire 的 application.name，
+// ducking 据此排除 voice-brief 自己的播放流，避免多实例互相压低
+export const VOICE_BRIEF_PLAYER_APPLICATION_NAME = 'voice-brief';
+
 export type BriefKind = VoiceBriefHookBrief['kind'];
 
 export type ProgressPriority = VoiceBriefHookBrief['priority'];

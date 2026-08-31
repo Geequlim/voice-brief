@@ -115,15 +115,17 @@ describe('VoiceBriefPlaybackService', () => {
 		config.playback.command = 'auto';
 
 		await service.playAudioFile(createPaths(), config, '/tmp/audio.wav', 1.4, async () => undefined);
-		expect(play.mock.calls[0]?.[1]).toEqual({
+		expect(play.mock.calls[0]?.[1]).toMatchObject({
 			detached: false,
-			mpv: ['--no-video', '--really-quiet', '--volume=140'],
+			env: { 'PULSE_PROP_application.name': 'voice-brief' },
+			mpv: ['--no-video', '--really-quiet', '--audio-client-name=voice-brief', '--volume=140'],
 		});
 
 		await service.playAudioFile(createPaths(), config, '/tmp/audio.wav', undefined, async () => undefined);
-		expect(play.mock.calls[1]?.[1]).toEqual({
+		expect(play.mock.calls[1]?.[1]).toMatchObject({
 			detached: false,
-			mpv: ['--no-video', '--really-quiet'],
+			env: { 'PULSE_PROP_application.name': 'voice-brief' },
+			mpv: ['--no-video', '--really-quiet', '--audio-client-name=voice-brief'],
 		});
 	});
 
@@ -134,7 +136,7 @@ describe('VoiceBriefPlaybackService', () => {
 		config.playback.command = 'auto';
 
 		await service.playAudioFile(createPaths(), config, '/tmp/audio.wav', 1.5, async () => undefined);
-		expect(play.mock.calls[0]?.[1]).toEqual({
+		expect(play.mock.calls[0]?.[1]).toMatchObject({
 			detached: false,
 			ffplay: ['-nodisp', '-autoexit', '-loglevel', 'quiet', '-volume', '100'],
 		});
@@ -145,7 +147,7 @@ describe('VoiceBriefPlaybackService', () => {
 		const service = createService();
 
 		await service.playAudioFile(createPaths(), createConfig(), '/tmp/audio.wav', 1.4, async () => undefined);
-		expect(play.mock.calls[0]?.[1]).toEqual({
+		expect(play.mock.calls[0]?.[1]).toMatchObject({
 			detached: false,
 			mpv: [],
 		});

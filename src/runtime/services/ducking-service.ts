@@ -5,6 +5,7 @@ import path from 'node:path';
 import type { VoiceBriefConfig } from '../../config/schema';
 import type { VoiceBriefPaths } from '../../config/types';
 import { hasErrorCode } from '../../error';
+import { VOICE_BRIEF_PLAYER_APPLICATION_NAME } from '../types';
 import { DuckingJournalSchema, PactlSinkInputsSchema } from '../schema';
 import type { DuckingJournal, DuckingStream, PactlSinkInput } from '../schema';
 import type { DuckingCheckResult } from '../types';
@@ -283,7 +284,9 @@ export class VoiceBriefDuckingService {
 	}
 
 	private isDuckingExcluded(input: PactlSinkInput) {
-		return input.properties?.['application.name'] === CINNAMON_SMOKE_APPLICATION_NAME;
+		const applicationName = input.properties?.['application.name'];
+		// voice-brief 自己的播放流不参与压低：多 daemon 并存时互相压低会让两边都听不清
+		return applicationName === VOICE_BRIEF_PLAYER_APPLICATION_NAME || applicationName === CINNAMON_SMOKE_APPLICATION_NAME;
 	}
 
 	private sameVolumes(left: number[], right: number[], relativeTolerance = 0) {

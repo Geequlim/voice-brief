@@ -2,6 +2,7 @@ import createPlayer from 'play-sound';
 import type { ChildProcess } from 'node:child_process';
 import type { VoiceBriefConfig } from '../../config/schema';
 import type { VoiceBriefPaths } from '../../config/types';
+import { VOICE_BRIEF_PLAYER_APPLICATION_NAME } from '../types';
 import type { PlayerCheckResult } from '../types';
 import type { VoiceBriefRuntimeModule } from '../index';
 
@@ -14,7 +15,7 @@ interface PlaybackPlayerFactory {
 	(options?: { player?: string; players?: string[] }): PlaybackPlayer;
 }
 
-type PlaybackOptions = Record<string, boolean | string[]> & {
+type PlaybackOptions = Record<string, boolean | string[] | NodeJS.ProcessEnv> & {
 	detached: boolean;
 };
 
@@ -146,7 +147,9 @@ export class VoiceBriefPlaybackService {
 	}
 
 	private defaultArgsFor(player?: string) {
-		if (player === 'mpv') return ['--no-video', '--really-quiet'];
+		// --audio-client-name 把 voice-brief 播放流标记进 application.name，
+		// ducking 以此跳过自己的流（mpv 不受 PULSE_PROP 环境变量影响）
+		if (player === 'mpv') return ['--no-video', '--really-quiet', `--audio-client-name=${VOICE_BRIEF_PLAYER_APPLICATION_NAME}`];
 		if (player === 'ffplay') return ['-nodisp', '-autoexit', '-loglevel', 'quiet'];
 		return [];
 	}
@@ -160,6 +163,12 @@ export class VoiceBriefPlaybackService {
 		if (!playerName) throw new Error('播放器命令为空');
 		const options = {
 			detached: false,
+			// mpv 会覆盖 application.name，仅靠环境变量标记不了它；
+			// 对不自带命名的播放器该环境变量仍能生效
+			env: {
+				...process.env,
+				'PULSE_PROP_application.name': VOICE_BRIEF_PLAYER_APPLICATION_NAME,
+			},
 			[playerName]: args,
 		};
 
