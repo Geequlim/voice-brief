@@ -84,9 +84,58 @@ describe('voice-brief marker block', () => {
 		expect(second.match(/voice-brief:codex:start/g)).toHaveLength(1);
 	});
 
-	test('进度提示文本会截断为 80 个字符', () => {
+	test('进度提示超限且没有句子边界时整段保留', () => {
 		const service = new VoiceBriefThrottleService({} as VoiceBriefRuntimeModule);
-		expect(service.normalizeText('测'.repeat(100), 'progress')).toHaveLength(80);
+		expect(service.normalizeText('测'.repeat(100), 'progress')).toEqual({
+			text: '测'.repeat(100),
+			kind: 'progress',
+			limitChars: 80,
+			originalChars: 100,
+			adjusted: true,
+			boundary: false,
+		});
+	});
+
+	test('超限文本会向后补齐到句子边界收尾', () => {
+		const service = new VoiceBriefThrottleService({} as VoiceBriefRuntimeModule);
+		const text = `${'好'.repeat(159)}。后面还有一句。`;
+		const normalized = service.normalizeText(text, 'final');
+
+		expect(normalized).toEqual({
+			text: `${'好'.repeat(159)}。`,
+			kind: 'final',
+			limitChars: 160,
+			originalChars: 167,
+			adjusted: true,
+			boundary: true,
+		});
+	});
+
+	test('未超限文本原样保留', () => {
+		const service = new VoiceBriefThrottleService({} as VoiceBriefRuntimeModule);
+		const normalized = service.normalizeText('任务已经完成，可以继续下一步。  ', 'final');
+
+		expect(normalized).toMatchObject({ adjusted: false, boundary: true, originalChars: 15 });
+	});
+
+	test('实际超限样例会在最后一个句号处收尾而不是切断词句', () => {
+		const service = new VoiceBriefThrottleService({} as VoiceBriefRuntimeModule);
+		const text = '盘点完成：主要还可升级的是 ESLint、Prettier、Stylelint、PostCSS、Svelte ESLint 插件和几个辅助工具；Rspack、Vite、Storybook、Vitest、Playwright、Svelte 已基本是最新。typescript-eslint 受 TS7 兼容限制，zip 工具和内部预览工具需要单独评估。';
+		const normalized = service.normalizeText(text, 'final');
+
+		expect(normalized.text.endsWith('需要单独评估。')).toBe(true);
+		expect(service.formatAdjustmentWarning(normalized)).toBe(
+			'最终简报文本共 175 字，超出 160 字上限，已在句子边界收尾播报（本次 175 字）。下次请把最终简报控制在 160 字以内。',
+		);
+	});
+
+	test('无句子边界的超限文本会生成完整播报警告', () => {
+		const service = new VoiceBriefThrottleService({} as VoiceBriefRuntimeModule);
+		const normalized = service.normalizeText('测'.repeat(100), 'progress');
+
+		expect(service.formatAdjustmentWarning(normalized)).toBe(
+			'过程播报文本共 100 字，超出 80 字上限，未找到句子边界，已完整播报（本次 100 字）。下次请把过程播报控制在 80 字以内。',
+		);
 	});
 
 	test('相同进度提示在节流窗口内会被跳过', () => {
@@ -255,6 +304,29 @@ describe('voice-brief marker block', () => {
 
 		expect(code).toBe(1);
 		expect(lines).toEqual(['[voice-brief] request rejected: capacity']);
+	});
+
+	test('speak 超限时在 stderr 输出警告并保持成功退出', async () => {
+		const lines: string[] = [];
+		const errors: string[] = [];
+		const warning = '最终简报文本共 175 字，超出 160 字上限，已在句子边界收尾播报（本次 175 字）。下次请把最终简报控制在 160 字以内。';
+		const command = new VoiceBriefSpeakCommand({
+			daemonClientService: {
+				submit: async () => ({ status: 'synthesizing', requestId: 'request-1', provider: 'edge', warning }),
+			},
+		} as never);
+
+		const code = await command.speak({
+			args: { text: ['测试'] },
+			options: {},
+			stderr: { write: (chunk: string) => { errors.push(chunk); } },
+		} as never, {
+			line: (message: string) => { lines.push(message); },
+		} as never);
+
+		expect(code).toBe(0);
+		expect(lines).toEqual(['[voice-brief] synthesis started via edge']);
+		expect(errors).toEqual([`[voice-brief] warning: ${warning}\n`]);
 	});
 
 	test('speak 会将来源上下文提交给 daemon', async () => {

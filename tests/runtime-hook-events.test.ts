@@ -27,6 +27,7 @@ import { VoiceBriefPersonaModule } from '../src/persona';
 import type { VoiceBriefRuntimeModule } from '../src/runtime';
 import type { PreparedAudioResult } from '../src/runtime/types';
 import { VoiceBriefRuntimeService } from '../src/runtime/services/runtime-service';
+import { VoiceBriefThrottleService } from '../src/runtime/services/throttle-service';
 
 function createConfig(): VoiceBriefConfig {
 	return {
@@ -126,7 +127,17 @@ function createRuntime(options?: {
 			pruneIfNeeded: vi.fn().mockResolvedValue(undefined),
 		},
 		throttleService: {
-			normalizeText: (text: string) => text.trim(),
+			normalizeText: (text: string, kind: 'final' | 'progress') => {
+				const trimmed = text.trim();
+				return {
+					text: trimmed,
+					kind,
+					limitChars: kind === 'progress' ? 80 : 160,
+					originalChars: Array.from(trimmed).length,
+					adjusted: false,
+					boundary: true,
+				};
+			},
 			getProgressSkipResult: (): undefined => undefined,
 			applyProgressState: vi.fn(),
 			applyFinalState: vi.fn(),
@@ -201,6 +212,20 @@ describe('VoiceBrief Runtime Hook 事件', () => {
 				color: '#F59EAE',
 			},
 		});
+	});
+
+	test('文本超限时准入结果携带句子边界警告并播报收尾后的文本', async () => {
+		const runtime = createRuntime();
+		(runtime.service.module as { throttleService: VoiceBriefThrottleService }).throttleService = new VoiceBriefThrottleService(runtime.service.module);
+		const text = `${'好'.repeat(159)}。后面还有一句。`;
+
+		const admission = await runtime.service.admitSpeech('brief-1', { kind: 'final', text });
+		if (admission.status !== 'admitted') throw new Error('测试预期任务通过准入');
+
+		expect(admission.speech.brief).toBe(`${'好'.repeat(159)}。`);
+		expect(admission.warning).toBe(
+			'最终简报文本共 167 字，超出 160 字上限，已在句子边界收尾播报（本次 160 字）。下次请把最终简报控制在 160 字以内。',
+		);
 	});
 
 	test('provider 返回的 alignment 会完整传递给播放 Hook 事件', async () => {

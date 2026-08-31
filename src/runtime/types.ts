@@ -82,6 +82,15 @@ export interface RuntimeProgressSkipResult {
 	reason: 'duplicate' | 'throttled';
 }
 
+export interface RuntimeNormalizedBrief {
+	text: string;
+	kind: BriefKind;
+	limitChars: number;
+	originalChars: number;
+	adjusted: boolean;
+	boundary: boolean;
+}
+
 export interface SpeakTextOptions {
 	agent?: string;
 	model?: string;
@@ -102,8 +111,8 @@ export interface DaemonSubmitRequest {
 }
 
 export type DaemonSubmitResult =
-	| { status: 'cached'; requestId: string; provider: string; }
-	| { status: 'synthesizing'; requestId: string; provider: string; }
+	| { status: 'cached'; requestId: string; provider: string; warning?: string; }
+	| { status: 'synthesizing'; requestId: string; provider: string; warning?: string; }
 	| { status: 'skipped'; requestId: string; reason: RuntimeAdmissionSkipReason; }
 	| { status: 'rejected'; requestId: string; reason: 'capacity'; provider: string; };
 
@@ -136,7 +145,7 @@ export interface RuntimeSpeechTask {
 export type RuntimeAdmissionSkipReason = Exclude<VoiceBriefHookSkipReason, 'player_disabled'>;
 
 export type RuntimeSpeechAdmission =
-	| { status: 'admitted'; speech: RuntimeSpeechTask; }
+	| { status: 'admitted'; speech: RuntimeSpeechTask; warning?: string; }
 	| { status: 'skipped'; reason: RuntimeAdmissionSkipReason; };
 
 export interface RuntimeSpeechStart {

@@ -61,7 +61,7 @@ export class VoiceBriefSchedulerService {
 			const start = await this.module.runtimeService.startSpeech(admission.speech, task.request.options);
 			task.state = 'synthesizing';
 			void this.complete(task, start.completion);
-			return { status: start.status, requestId: task.id, provider: start.provider };
+			return { status: start.status, requestId: task.id, provider: start.provider, warning: admission.warning };
 		} catch (error) {
 			this.$tasks.delete(task.id);
 			if (error instanceof VoiceBriefProviderBusyError) {

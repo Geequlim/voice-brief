@@ -60,6 +60,9 @@ export class VoiceBriefSpeakCommand extends VoiceBriefRuntimeCommand {
 		});
 		if (result.status === 'cached') output.line(`[voice-brief] cache hit via ${result.provider}`);
 		if (result.status === 'synthesizing') output.line(`[voice-brief] synthesis started via ${result.provider}`);
+		if ((result.status === 'cached' || result.status === 'synthesizing') && result.warning) {
+			ctx.stderr.write(`[voice-brief] warning: ${result.warning}\n`);
+		}
 		if (result.status === 'skipped') output.line(`[voice-brief] request skipped: ${result.reason}`);
 		if (result.status === 'rejected') {
 			output.line(`[voice-brief] request rejected: ${result.reason}`);

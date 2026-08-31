@@ -34,7 +34,8 @@ export class VoiceBriefRuntimeService {
 		const configModule = this.getConfigModule();
 		await configModule.pathService.ensureVoiceBriefDirs(paths);
 		const config = await configModule.configService.ensure();
-		const brief = this.module.throttleService.normalizeText(request.text, request.kind);
+		const normalized = this.module.throttleService.normalizeText(request.text, request.kind);
+		const brief = normalized.text;
 		const priority = request.options?.priority || 'normal';
 		const source = request.options?.agent || request.options?.model || request.options?.session
 			? { agent: request.options?.agent, model: request.options?.model, session: request.options?.session }
@@ -75,7 +76,11 @@ export class VoiceBriefRuntimeService {
 			await this.emitHook(task, 'brief.skipped', { reason: skipped.reason });
 			return { status: 'skipped', reason: skipped.reason };
 		}
-		return { status: 'admitted', speech: task };
+		return {
+			status: 'admitted',
+			speech: task,
+			warning: normalized.adjusted ? this.module.throttleService.formatAdjustmentWarning(normalized) : undefined,
+		};
 	}
 
 	async startSpeech(task: RuntimeSpeechTask, options?: DaemonSubmitRequest['options']): Promise<RuntimeSpeechStart> {
