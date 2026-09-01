@@ -39,7 +39,7 @@ describe('Cinnamon 打包与自动安装验证', () => {
 			scripts: { postinstall: string };
 		};
 		expect(manifest.name).toBe('@tinyaxis/voice-brief-cinnamon');
-		expect(manifest.version).toBe('0.4.0');
+		expect(manifest.version).toBe((JSON.parse(fs.readFileSync(path.join(workspace, 'package.json'), 'utf8')) as { version: string }).version);
 		expect(manifest.license).toBe('MIT');
 		expect(manifest.os).toEqual(['linux']);
 		expect(manifest.engines.node).toBe('>=24.0.0');

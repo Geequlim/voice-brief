@@ -47,7 +47,7 @@ describe('CLI 打包验证', () => {
 		const bin = typeof manifest.bin === 'string' ? { 'voice-brief': manifest.bin } : manifest.bin;
 		expect(bin).toEqual({ 'voice-brief': './index.bin.js' });
 		expect(manifest.engines).toEqual({ node: '>=24.0.0' });
-		expect(manifest.version).toBe('0.4.0');
+		expect(manifest.version).toBe((JSON.parse(fs.readFileSync(path.join(workspace, 'package.json'), 'utf8')) as { version: string }).version);
 	}, 60_000);
 
 	test('打包 npm tarball', () => {

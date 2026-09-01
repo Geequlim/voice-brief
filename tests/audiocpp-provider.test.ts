@@ -12,7 +12,7 @@ const httpPost = vi.hoisted(() => vi.fn());
 const execFileMock = vi.hoisted(() => {
 	const mock = vi.fn();
 	// 还原 execFile 自带的 custom promisify 行为，让 promisify 结果仍是 { stdout, stderr }
-	mock[Symbol.for('nodejs.util.promisify.custom')] = (...args: unknown[]) =>
+	(mock as unknown as Record<symbol, unknown>)[Symbol.for('nodejs.util.promisify.custom')] = (...args: unknown[]) =>
 		new Promise((resolve, reject) => {
 			mock(...args, (error: Error | null, stdout?: string, stderr?: string) => {
 				if (error) reject(error);
