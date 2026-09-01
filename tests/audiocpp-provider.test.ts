@@ -1,6 +1,7 @@
 import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
+import type { execFile } from 'node:child_process';
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 import type { VoiceBriefConfig } from '../src/config/schema';
 import type { VoiceBriefPaths } from '../src/config/types';
@@ -8,6 +9,18 @@ import type { VoiceBriefRuntimeModule } from '../src/runtime';
 
 const httpGet = vi.hoisted(() => vi.fn());
 const httpPost = vi.hoisted(() => vi.fn());
+const execFileMock = vi.hoisted(() => {
+	const mock = vi.fn();
+	// 还原 execFile 自带的 custom promisify 行为，让 promisify 结果仍是 { stdout, stderr }
+	mock[Symbol.for('nodejs.util.promisify.custom')] = (...args: unknown[]) =>
+		new Promise((resolve, reject) => {
+			mock(...args, (error: Error | null, stdout?: string, stderr?: string) => {
+				if (error) reject(error);
+				else resolve({ stdout, stderr });
+			});
+		});
+	return mock;
+});
 
 vi.mock('../src/infrastructure/http', () => ({
 	default: {
@@ -16,7 +29,32 @@ vi.mock('../src/infrastructure/http', () => ({
 	},
 }));
 
+vi.mock('node:child_process', () => ({
+	execFile: execFileMock,
+}));
+
 import { AudioCppProvider } from '../src/runtime/providers/audiocpp-provider';
+
+function stubFfmpeg(meanVolume: string, maxVolume: string) {
+	execFileMock.mockImplementation(((...callArgs: unknown[]) => {
+		const callback = callArgs[callArgs.length - 1] as (error: Error | null, stdout?: string, stderr?: string) => void;
+		const ffmpegArgs = (callArgs.slice(1).find(arg => Array.isArray(arg)) ?? []) as string[];
+		if (ffmpegArgs.includes('volumedetect')) {
+			callback(null, '', `[Parsed_volumedetect_0 @ 0x1] mean_volume: ${meanVolume} dB\n[Parsed_volumedetect_0 @ 0x1] max_volume: ${maxVolume} dB\n`);
+			return;
+		}
+		const output = ffmpegArgs[ffmpegArgs.length - 1];
+		void fs.mkdir(path.dirname(output), { recursive: true })
+			.then(() => fs.writeFile(output, Buffer.alloc(0)))
+			.then(() => callback(null), error => callback(error as Error));
+	}) as unknown as typeof execFile);
+}
+
+function transcodeCalls(): string[][] {
+	return execFileMock.mock.calls
+		.map(([, args]) => args as string[])
+		.filter(args => !args.includes('volumedetect'));
+}
 
 function createConfig(overrides?: Partial<NonNullable<VoiceBriefConfig['providers']['audiocpp']>>): VoiceBriefConfig {
 	return {
@@ -34,6 +72,7 @@ describe('AudioCppProvider', () => {
 	beforeEach(() => {
 		httpGet.mockReset();
 		httpPost.mockReset();
+		execFileMock.mockReset();
 	});
 
 	afterEach(() => {
@@ -173,6 +212,55 @@ describe('AudioCppProvider', () => {
 			type: 'base64',
 			data: `data:audio/wav;base64,${transcoded.toString('base64')}`,
 		});
+	});
+
+	test('偏轻的 mp3 参考音频转码时按测量响度施加增益', async () => {
+		const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), 'voice-brief-audiocpp-'));
+		const provider = new AudioCppProvider({} as VoiceBriefRuntimeModule);
+		stubFfmpeg('-28.7', '-11.3');
+
+		await (provider as unknown as { transcodeToWav: (input: string, output: string) => Promise<void>; })
+			.transcodeToWav(path.join(tempDir, 'ref.mp3'), path.join(tempDir, 'out.wav'));
+
+		const transcodeArgs = transcodeCalls()[0];
+		expect(transcodeArgs).toContain('-af');
+		// -16 目标响度给出 12.7dB，但 -1.5dB 峰值上限把增益压到 9.8dB
+		expect(transcodeArgs).toContain('volume=9.8dB');
+	});
+
+	test('响度达标的参考音频转码时不施加增益', async () => {
+		const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), 'voice-brief-audiocpp-'));
+		const provider = new AudioCppProvider({} as VoiceBriefRuntimeModule);
+		stubFfmpeg('-15.9', '-1.4');
+
+		await (provider as unknown as { transcodeToWav: (input: string, output: string) => Promise<void>; })
+			.transcodeToWav(path.join(tempDir, 'ref.mp3'), path.join(tempDir, 'out.wav'));
+
+		const transcodeArgs = transcodeCalls()[0];
+		expect(transcodeArgs).not.toContain('-af');
+	});
+
+	test('响度测量失败时退回无增益转码', async () => {
+		const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), 'voice-brief-audiocpp-'));
+		const provider = new AudioCppProvider({} as VoiceBriefRuntimeModule);
+		execFileMock.mockImplementation(((...callArgs: unknown[]) => {
+			const callback = callArgs[callArgs.length - 1] as (error: Error | null) => void;
+			const ffmpegArgs = (callArgs.slice(1).find(arg => Array.isArray(arg)) ?? []) as string[];
+			if (ffmpegArgs.includes('volumedetect')) {
+				callback(new Error('ffmpeg analyze failed'));
+				return;
+			}
+			const output = ffmpegArgs[ffmpegArgs.length - 1];
+			void fs.mkdir(path.dirname(output), { recursive: true })
+				.then(() => fs.writeFile(output, Buffer.alloc(0)))
+				.then(() => callback(null), error => callback(error as Error));
+		}) as unknown as typeof execFile);
+
+		await (provider as unknown as { transcodeToWav: (input: string, output: string) => Promise<void>; })
+			.transcodeToWav(path.join(tempDir, 'ref.mp3'), path.join(tempDir, 'out.wav'));
+
+		const transcodeArgs = transcodeCalls()[0];
+		expect(transcodeArgs).not.toContain('-af');
 	});
 
 	test('不支持的参考音频格式会直接报错', async () => {

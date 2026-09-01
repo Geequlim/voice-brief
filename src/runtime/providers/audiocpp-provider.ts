@@ -45,6 +45,10 @@ export class AudioCppProvider extends OpenAiProvider {
 	protected override readonly $defaultBaseUrl = 'http://127.0.0.1:8080/v1';
 	private readonly $voiceRefMaxBytes = 5 * 1024 * 1024;
 	private readonly $modelLoadTimeoutMs = 120000;
+	// fish 克隆会复刻参考音频的响度，参考之间响度差会直接传导到合成结果，转码时统一增益到目标响度
+	private readonly $voiceRefTargetMeanDb = -16;
+	private readonly $voiceRefPeakCeilingDb = -1.5;
+	private readonly $voiceRefCacheTag = 'loudnorm-v1';
 	private readonly $catalogCache = new Map<string, Map<string, AudioCppCatalogEntry>>();
 
 	override async check(config: VoiceBriefConfig): Promise<ProviderCheckResult> {
@@ -263,7 +267,7 @@ export class AudioCppProvider extends OpenAiProvider {
 		if (this.isWav(content)) return content;
 		if (!this.isMp3(content)) throw new Error(`voiceRef 参考音频格式不支持，仅支持 wav 或 mp3: ${file}`);
 		if (!paths) throw new Error('voiceRef 为 mp3 时需要 paths 中的缓存目录来存放转码结果');
-		const cacheFile = path.join(paths.cacheDir, 'audiocpp', 'voice-refs', `${createHash('sha256').update(content).digest('hex')}.wav`);
+		const cacheFile = path.join(paths.cacheDir, 'audiocpp', 'voice-refs', `${createHash('sha256').update(content).update(this.$voiceRefCacheTag).digest('hex')}.wav`);
 		if (await this.existsFile(cacheFile)) return fs.readFile(cacheFile);
 		await this.transcodeToWav(file, cacheFile);
 		return fs.readFile(cacheFile);
@@ -272,10 +276,26 @@ export class AudioCppProvider extends OpenAiProvider {
 	private async transcodeToWav(input: string, output: string) {
 		await fs.mkdir(path.dirname(output), { recursive: true });
 		try {
-			await $execFile('ffmpeg', ['-y', '-loglevel', 'error', '-i', input, '-ar', '44100', '-ac', '1', '-sample_fmt', 's16', output]);
+			const gainDb = await this.measureRefGain(input);
+			const filterArgs = gainDb === undefined ? [] : ['-af', `volume=${gainDb.toFixed(1)}dB`];
+			await $execFile('ffmpeg', ['-y', '-loglevel', 'error', '-i', input, ...filterArgs, '-ar', '44100', '-ac', '1', '-sample_fmt', 's16', output]);
 		} catch (error) {
 			await fs.rm(output, { force: true });
 			throw new Error(`voiceRef 参考音频转码失败，请确认本机已安装 ffmpeg: ${(error as Error).message}`);
+		}
+	}
+
+	// 测量参考音频响度并计算统一增益；峰值同时受 -1.5dB 上限约束避免削波。测量失败时退回无增益转码
+	private async measureRefGain(input: string): Promise<number | undefined> {
+		try {
+			const { stderr } = await $execFile('ffmpeg', ['-i', input, '-af', 'volumedetect', '-f', 'null', '-'], { maxBuffer: 4 * 1024 * 1024 });
+			const mean = /mean_volume:\s*(-?\d+(?:\.\d+)?)\s*dB/.exec(stderr)?.[1];
+			const max = /max_volume:\s*(-?\d+(?:\.\d+)?)\s*dB/.exec(stderr)?.[1];
+			if (!mean || !max) return undefined;
+			const gain = Math.min(this.$voiceRefTargetMeanDb - Number(mean), this.$voiceRefPeakCeilingDb - Number(max));
+			return Math.abs(gain) < 0.3 ? undefined : Math.round(gain * 10) / 10;
+		} catch {
+			return undefined;
 		}
 	}
 
