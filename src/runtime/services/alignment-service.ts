@@ -48,7 +48,7 @@ export class VoiceBriefAlignmentService {
 		const key = this.module.cacheService.createCacheKey(`alignment-${provider}`, task.brief, {
 			extension: 'json',
 			keyData: {
-				adapterVersion: 1,
+				adapterVersion: 2,
 				audioHash,
 				language: config?.language,
 				model: config?.model,

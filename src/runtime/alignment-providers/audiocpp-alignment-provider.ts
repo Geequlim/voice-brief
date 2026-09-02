@@ -69,16 +69,7 @@ export class AudioCppAlignmentProvider {
 	}
 
 	private async prepareAudio(audioFile: string, tempDir: string) {
-		const header = Buffer.alloc(12);
-		const handle = await fs.open(audioFile, 'r');
-		try {
-			await handle.read(header, 0, header.length, 0);
-		} finally {
-			await handle.close();
-		}
-		if (header.toString('ascii', 0, 4) === 'RIFF' && header.toString('ascii', 8, 12) === 'WAVE') {
-			return { file: audioFile, temporary: false };
-		}
+		if (await this.isAlignmentReadyWav(audioFile)) return { file: audioFile, temporary: false };
 
 		await fs.mkdir(tempDir, { recursive: true });
 		const output = path.join(tempDir, `alignment-${randomUUID()}.wav`);
@@ -89,6 +80,36 @@ export class AudioCppAlignmentProvider {
 			await fs.rm(output, { force: true }).catch((): undefined => undefined);
 			throw new Error(`alignment 音频转码失败，请确认本机已安装 ffmpeg: ${(error as Error).message}`);
 		}
+	}
+
+	private async isAlignmentReadyWav(audioFile: string) {
+		const header = Buffer.alloc(64 * 1024);
+		const handle = await fs.open(audioFile, 'r');
+		let bytesRead = 0;
+		try {
+			({ bytesRead } = await handle.read(header, 0, header.length, 0));
+		} finally {
+			await handle.close();
+		}
+		const data = header.subarray(0, bytesRead);
+		if (data.length < 12 || data.toString('ascii', 0, 4) !== 'RIFF' || data.toString('ascii', 8, 12) !== 'WAVE') return false;
+		let offset = 12;
+		while (offset + 8 <= data.length) {
+			const chunkId = data.toString('ascii', offset, offset + 4);
+			const chunkSize = data.readUInt32LE(offset + 4);
+			const chunkDataOffset = offset + 8;
+			if (chunkId === 'fmt ') {
+				if (chunkSize < 16 || chunkDataOffset + 16 > data.length) return false;
+				return data.readUInt16LE(chunkDataOffset) === 1
+					&& data.readUInt16LE(chunkDataOffset + 2) === 1
+					&& data.readUInt32LE(chunkDataOffset + 4) === 16000
+					&& data.readUInt16LE(chunkDataOffset + 14) === 16;
+			}
+			const nextOffset = chunkDataOffset + chunkSize + (chunkSize % 2);
+			if (nextOffset <= offset) return false;
+			offset = nextOffset;
+		}
+		return false;
 	}
 
 	private parseResponse(value: unknown): AudioCppAlignmentResponse {

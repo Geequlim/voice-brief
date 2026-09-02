@@ -44,10 +44,24 @@ async function createPaths(): Promise<VoiceBriefPaths> {
 	};
 }
 
-function wavBytes() {
-	const bytes = Buffer.alloc(12);
+function wavBytes(options?: { bitsPerSample?: number; channels?: number; sampleRate?: number; }) {
+	const bitsPerSample = options?.bitsPerSample ?? 16;
+	const channels = options?.channels ?? 1;
+	const sampleRate = options?.sampleRate ?? 16000;
+	const bytes = Buffer.alloc(44);
 	bytes.write('RIFF', 0, 'ascii');
+	bytes.writeUInt32LE(36, 4);
 	bytes.write('WAVE', 8, 'ascii');
+	bytes.write('fmt ', 12, 'ascii');
+	bytes.writeUInt32LE(16, 16);
+	bytes.writeUInt16LE(1, 20);
+	bytes.writeUInt16LE(channels, 22);
+	bytes.writeUInt32LE(sampleRate, 24);
+	bytes.writeUInt32LE(sampleRate * channels * bitsPerSample / 8, 28);
+	bytes.writeUInt16LE(channels * bitsPerSample / 8, 32);
+	bytes.writeUInt16LE(bitsPerSample, 34);
+	bytes.write('data', 36, 'ascii');
+	bytes.writeUInt32LE(0, 40);
 	return bytes;
 }
 
@@ -71,7 +85,7 @@ afterEach(async () => {
 });
 
 describe('AudioCppAlignmentProvider', () => {
-	test('按文件头识别 WAV 并跳过 ffmpeg', async () => {
+	test('16k 单声道 s16 PCM WAV 直接上传并跳过 ffmpeg', async () => {
 		const paths = await createPaths();
 		const audioFile = path.join(paths.configDir, 'audio.bin');
 		await fs.writeFile(audioFile, wavBytes());
@@ -90,6 +104,22 @@ describe('AudioCppAlignmentProvider', () => {
 		expect(execute).not.toHaveBeenCalled();
 		expect(result.cues.map(cue => cue.text)).toEqual(['任', '务']);
 		expect(result.cues[1]).toMatchObject({ startChar: 1, endChar: 2, startMs: 100, endMs: 200 });
+	});
+
+	test('44.1k WAV 不符合对齐输入要求并执行转换', async () => {
+		const paths = await createPaths();
+		const audioFile = path.join(paths.configDir, 'audio.wav');
+		await fs.writeFile(audioFile, wavBytes({ sampleRate: 44100 }));
+		const execute = vi.fn(async (_command: string, args: readonly string[]) => {
+			const output = args.at(-1);
+			if (!output) throw new Error('missing output');
+			await fs.writeFile(output, wavBytes());
+		});
+		stubAlignmentResponse();
+
+		await new AudioCppAlignmentProvider(execute).align({ audioFile, config: createConfig(), paths, text: '任务' });
+
+		expect(execute).toHaveBeenCalledWith('ffmpeg', expect.arrayContaining(['-ar', '16000', '-ac', '1', '-sample_fmt', 's16']));
 	});
 
 	test('非 WAV 转成 16k 单声道 s16，上传后只清理临时文件', async () => {
