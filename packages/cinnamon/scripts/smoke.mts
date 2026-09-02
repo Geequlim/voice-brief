@@ -6,10 +6,11 @@ import { createConnection } from 'node:net';
 import { homedir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { createSpeechAlignment } from '../../../src/runtime/alignment.mts';
+import { createSpeechAlignment } from '../../../src/runtime/alignment.ts';
 
-type SmokeScenarioName = 'all' | 'dialogue' | 'entrance' | 'karaoke' | 'multiline' | 'no-session' | 'queue';
+type SmokeScenarioName = 'all' | 'dialogue' | 'entrance' | 'karaoke' | 'karaoke-late' | 'multiline' | 'no-session' | 'queue';
 type HookEventName =
+	| 'audio.alignment.ready'
 	| 'playback.completed'
 	| 'playback.queued'
 	| 'playback.ready'
@@ -50,6 +51,12 @@ const scenarios: ReadonlyArray<SmokeScenario> = [
 		session: 'KTV 逐字 fixture 冒烟测试',
 	},
 	{
+		name: 'karaoke-late',
+		description: '播放开始后延迟接入逐字时间轴并追赶当前进度',
+		text: '',
+		session: 'KTV 延迟对齐 fixture 冒烟测试',
+	},
+	{
 		name: 'entrance',
 		description: '播放就绪后的头像与完整对话入场动画',
 		text: '这条消息用于检查播放就绪之后的头像与完整对话入场动画。',
@@ -81,7 +88,7 @@ const scenarios: ReadonlyArray<SmokeScenario> = [
 ];
 
 if (!isSmokeScenarioName(scenarioName)) {
-	throw new Error(`未知场景 ${scenarioName}，可用场景：all、entrance、dialogue、karaoke、multiline、no-session、queue`);
+	throw new Error(`未知场景 ${scenarioName}，可用场景：all、entrance、dialogue、karaoke、karaoke-late、multiline、no-session、queue`);
 }
 
 const socketPath = process.env.VOICE_BRIEF_CINNAMON_SOCKET ?? DEFAULT_SOCKET_PATH;
@@ -89,7 +96,7 @@ const personaPath = process.env.VOICE_BRIEF_SMOKE_PERSONA ?? DEFAULT_PERSONA_PAT
 await access(socketPath);
 const persona = await loadPersona(personaPath);
 const selectedScenarios = scenarioName === 'all'
-	? scenarios.filter(scenario => scenario.name !== 'karaoke')
+	? scenarios.filter(scenario => scenario.name !== 'karaoke' && scenario.name !== 'karaoke-late')
 	: scenarios.filter(scenario => scenario.name === scenarioName);
 
 for (const [index, scenario] of selectedScenarios.entries()) {
@@ -99,7 +106,7 @@ for (const [index, scenario] of selectedScenarios.entries()) {
 }
 
 function isSmokeScenarioName(value: string): value is SmokeScenarioName {
-	return ['all', 'entrance', 'dialogue', 'karaoke', 'multiline', 'no-session', 'queue'].includes(value);
+	return ['all', 'entrance', 'dialogue', 'karaoke', 'karaoke-late', 'multiline', 'no-session', 'queue'].includes(value);
 }
 
 async function loadPersona(path: string): Promise<SmokePersona> {
@@ -126,7 +133,7 @@ function readFrontmatterField(frontmatter: string, field: string): string | unde
 }
 
 async function runScenario(socketPath: string, persona: SmokePersona, scenario: SmokeScenario): Promise<void> {
-	if (scenario.name === 'karaoke') {
+	if (scenario.name === 'karaoke' || scenario.name === 'karaoke-late') {
 		await runKaraokeScenario(socketPath, persona, scenario);
 		return;
 	}
@@ -189,14 +196,13 @@ async function runKaraokeScenario(socketPath: string, persona: SmokePersona, sce
 		})),
 	});
 	const briefId = randomUUID();
-	const audio = {
+	const baseAudio = {
 		provider: 'fixture',
 		source: 'provider' as const,
 		durationMs: alignment.cues.at(-1)?.endMs ?? 0,
-		alignment,
 	};
 	let sequence = 1;
-	const send = async (event: HookEventName): Promise<void> => {
+	const send = async (event: HookEventName, includeAlignment = false): Promise<void> => {
 		await sendEvent(socketPath, {
 			protocol: 'voice-brief.hook-event',
 			version: 2,
@@ -208,13 +214,13 @@ async function runKaraokeScenario(socketPath: string, persona: SmokePersona, sce
 			brief: { text: fixture.text, kind: 'test', priority: 'normal' },
 			source: { agent: 'Codex', model: 'Fixture', session: scenario.session },
 			persona,
-			audio,
+			audio: includeAlignment ? { ...baseAudio, alignment } : baseAudio,
 		});
 		sequence += 1;
 	};
 
 	await send('playback.queued');
-	await send('playback.ready');
+	await send('playback.ready', scenario.name === 'karaoke');
 	await delay(1500);
 	const player = process.env.VOICE_BRIEF_KARAOKE_PLAYER ?? 'mpv';
 	const child = spawn(player, [
@@ -231,6 +237,10 @@ async function runKaraokeScenario(socketPath: string, persona: SmokePersona, sce
 		once(child, 'error').then(([error]) => Promise.reject(error)),
 	]);
 	await send('playback.started');
+	if (scenario.name === 'karaoke-late') {
+		await delay(2500);
+		await send('audio.alignment.ready', true);
+	}
 	const [exitCode] = await once(child, 'close') as [number | null];
 	if (exitCode !== 0) throw new Error(`${player} 播放 fixture 失败，退出码: ${exitCode ?? 'unknown'}`);
 	await send('playback.completed');

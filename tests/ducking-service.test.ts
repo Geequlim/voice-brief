@@ -62,6 +62,7 @@ const createConfig = (enabled = true, restoreFadeMs = 0): VoiceBriefConfig => ({
 	version: 1,
 	enabled: true,
 	provider: 'edge',
+	alignment: { enabled: false, provider: 'audiocpp' },
 	hooks: [],
 	providers: {},
 	playback: {

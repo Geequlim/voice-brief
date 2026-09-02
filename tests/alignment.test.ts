@@ -1,7 +1,7 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { describe, expect, test } from 'vitest';
-import { createSpeechAlignment } from '../src/runtime/alignment.mts';
+import { createSpeechAlignment } from '../src/runtime/alignment';
 
 interface Fixture {
 	text: string;

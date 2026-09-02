@@ -86,6 +86,26 @@ export const AudioCppProviderConfigSchema = Type.Object({
 
 export const AudioCppPersonaConfigSchema = Type.Object(AudioCppProviderOptions, { additionalProperties: false });
 
+export const AudioCppAlignmentConfigSchema = Type.Object({
+	apiKeyEnv: Type.Optional(Type.String({ minLength: 1 })),
+	baseUrl: Type.Optional(Type.String({ minLength: 1 })),
+	language: Type.Optional(Type.String({ minLength: 1 })),
+	model: Type.Optional(Type.String({ minLength: 1 })),
+	timeoutMs: Type.Optional(Type.Number({ minimum: 1 })),
+}, { additionalProperties: false });
+
+const AlignmentConfigSchema = Type.Object({
+	enabled: Type.Boolean(),
+	provider: Type.String({ minLength: 1 }),
+	audiocpp: Type.Optional(AudioCppAlignmentConfigSchema),
+}, { additionalProperties: false });
+
+const AlignmentConfigInputSchema = Type.Object({
+	enabled: Type.Optional(Type.Boolean()),
+	provider: Type.Optional(Type.String({ minLength: 1 })),
+	audiocpp: Type.Optional(AudioCppAlignmentConfigSchema),
+}, { additionalProperties: false });
+
 const StdinHookConfigSchema = Type.Object({
 	id: Type.String({ minLength: 1 }),
 	timeoutMs: Type.Optional(Type.Number({ minimum: 1 })),
@@ -166,6 +186,7 @@ export const VoiceBriefConfigSchema = Type.Object({
 	enabled: Type.Boolean(),
 	provider: Type.String({ minLength: 1 }),
 	fallbackProvider: Type.Optional(Type.String({ minLength: 1 })),
+	alignment: AlignmentConfigSchema,
 	hooks: Type.Array(VoiceBriefHookConfigSchema),
 	providers: ProvidersConfigSchema,
 	playback: PlaybackConfigSchema,
@@ -178,6 +199,7 @@ export const VoiceBriefConfigInputSchema = Type.Object({
 	enabled: Type.Optional(Type.Boolean()),
 	provider: Type.Optional(Type.String({ minLength: 1 })),
 	fallbackProvider: Type.Optional(Type.String({ minLength: 1 })),
+	alignment: Type.Optional(AlignmentConfigInputSchema),
 	hooks: Type.Optional(Type.Array(VoiceBriefHookConfigSchema)),
 	providers: Type.Optional(ProvidersConfigSchema),
 	playback: Type.Optional(PlaybackConfigInputSchema),
@@ -195,6 +217,7 @@ export const VoiceBriefStateSchema = Type.Object({
 }, { additionalProperties: false });
 
 export type AudioCppProviderConfig = Static<typeof AudioCppProviderConfigSchema>;
+export type AudioCppAlignmentConfig = Static<typeof AudioCppAlignmentConfigSchema>;
 export type EdgeProviderConfig = Static<typeof EdgeProviderConfigSchema>;
 export type FishProviderConfig = Static<typeof FishProviderConfigSchema>;
 export type MockProviderConfig = Static<typeof MockProviderConfigSchema>;

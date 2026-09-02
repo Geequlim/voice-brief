@@ -37,6 +37,7 @@ function createConfig(overrides?: Partial<VoiceBriefConfig>): VoiceBriefConfig {
 			networkCheckTtlMs: 60_000,
 		},
 		...overrides,
+		alignment: { enabled: false, provider: 'audiocpp', ...overrides?.alignment },
 	};
 }
 

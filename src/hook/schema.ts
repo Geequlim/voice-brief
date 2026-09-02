@@ -25,6 +25,7 @@ export const VoiceBriefHookEventNameSchema = Type.Union([
 	Type.Literal('brief.skipped'),
 	Type.Literal('audio.preparing'),
 	Type.Literal('audio.ready'),
+	Type.Literal('audio.alignment.ready'),
 	Type.Literal('audio.failed'),
 	Type.Literal('playback.queued'),
 	Type.Literal('playback.ready'),

@@ -151,4 +151,5 @@ describe('VoiceBriefHookService', () => {
 			{ id: 'daemon', ok: false, error: 'socket unavailable' },
 		]);
 	});
+
 });

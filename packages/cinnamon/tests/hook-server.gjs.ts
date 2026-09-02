@@ -93,6 +93,12 @@ try {
 		audio: { provider: 'legacy', source: 'provider' },
 	}));
 	send(socketPath, JSON.stringify(event));
+	send(socketPath, JSON.stringify({
+		...event,
+		eventId: 'event-alignment',
+		event: 'audio.alignment.ready',
+		sequence: 5,
+	}));
 	send(
 		socketPath,
 		JSON.stringify({
@@ -111,7 +117,7 @@ try {
 		return GLib.SOURCE_REMOVE;
 	});
 	const pollId = GLib.timeout_add(GLib.PRIORITY_DEFAULT, 10, () => {
-		if (events.length !== 3 || errors.length !== 3) return GLib.SOURCE_CONTINUE;
+		if (events.length !== 4 || errors.length !== 3) return GLib.SOURCE_CONTINUE;
 		loop.quit();
 		return GLib.SOURCE_REMOVE;
 	});
@@ -119,12 +125,13 @@ try {
 	if (GLib.main_context_default().find_source_by_id(timeoutId)) GLib.source_remove(timeoutId);
 	if (GLib.main_context_default().find_source_by_id(pollId)) GLib.source_remove(pollId);
 
-	assert(events.length === 3, `expected three valid events, received ${events.length}`);
+	assert(events.length === 4, `expected four valid events, received ${events.length}`);
 	assert(errors.length === 3, `expected three rejected events, received ${errors.length}`);
 	assert(events[0]?.version === 2 && !events[0]?.audio?.alignment, 'legacy v2 event should reach the consumer without alignment');
 	assert(events[1]?.event === 'playback.ready', 'extended v2 event should reach the consumer');
 	assert(events[1]?.audio?.alignment?.cues[0]?.text === '流', 'alignment should reach the consumer');
-	assert(events[2]?.reason === 'empty_text', 'empty skipped event should reach the consumer');
+	assert(events[2]?.event === 'audio.alignment.ready', 'late alignment event should reach the consumer');
+	assert(events[3]?.reason === 'empty_text', 'empty skipped event should reach the consumer');
 } finally {
 	server.stop();
 	assert(!GLib.file_test(socketPath, GLib.FileTest.EXISTS), 'socket should be removed after stop');

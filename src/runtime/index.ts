@@ -1,6 +1,7 @@
 import { Module } from '../infrastructure/module';
 import { VoiceBriefDoctorCommand, VoiceBriefProviderCommand, VoiceBriefRuntimeConfigCommand, VoiceBriefSpeakCommand } from './command';
 import { VoiceBriefAudioMetadataService } from './services/audio-metadata-service';
+import { VoiceBriefAlignmentService } from './services/alignment-service';
 import { VoiceBriefPlaybackService } from './services/playback-service';
 import { VoiceBriefProviderService } from './services/provider-service';
 import { VoiceBriefCacheService } from './services/cache-service';
@@ -22,6 +23,7 @@ export class VoiceBriefRuntimeModule extends Module {
 	readonly cacheService = new VoiceBriefCacheService(this);
 	readonly providerService = new VoiceBriefProviderService(this);
 	readonly audioMetadataService = new VoiceBriefAudioMetadataService(this);
+	readonly alignmentService = new VoiceBriefAlignmentService(this);
 	readonly duckingService = new VoiceBriefDuckingService(this);
 	readonly playbackService = new VoiceBriefPlaybackService(this);
 	readonly throttleService = new VoiceBriefThrottleService(this);

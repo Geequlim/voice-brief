@@ -21,6 +21,7 @@ const createConfig = (): VoiceBriefConfig => ({
 	version: 1,
 	enabled: true,
 	provider: 'edge',
+	alignment: { enabled: false, provider: 'audiocpp' },
 	hooks: [],
 	providers: {},
 	playback: {

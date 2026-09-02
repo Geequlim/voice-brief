@@ -50,6 +50,7 @@ const createTestConfig = (): VoiceBriefConfig => ({
 	enabled: true,
 	provider: 'edge',
 	fallbackProvider: undefined,
+	alignment: { enabled: false, provider: 'audiocpp' },
 	hooks: [],
 	providers: {},
 	playback: {

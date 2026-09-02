@@ -2,6 +2,7 @@ const EVENT_NAMES = new Set([
 	'brief.skipped',
 	'audio.preparing',
 	'audio.ready',
+	'audio.alignment.ready',
 	'audio.failed',
 	'playback.queued',
 	'playback.ready',

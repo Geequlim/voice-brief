@@ -19,6 +19,16 @@ export class VoiceBriefConfigService {
 			enabled: true,
 			provider: 'fish',
 			fallbackProvider: 'edge',
+			alignment: {
+				enabled: false,
+				provider: 'audiocpp',
+				audiocpp: {
+					baseUrl: 'http://127.0.0.1:8080/v1',
+					language: 'zh',
+					model: 'qwen3-align',
+					timeoutMs: 120000,
+				},
+			},
 			hooks: [],
 			providers: {
 				audiocpp: {
@@ -142,6 +152,11 @@ export class VoiceBriefConfigService {
 			...defaults,
 			...input,
 			hooks: input.hooks ?? defaults.hooks,
+			alignment: {
+				...defaults.alignment,
+				...input.alignment,
+				audiocpp: { ...defaults.alignment.audiocpp, ...input.alignment?.audiocpp },
+			},
 			providers: {
 				audiocpp: { ...defaults.providers.audiocpp, ...input.providers?.audiocpp },
 				edge: { ...defaults.providers.edge, ...input.providers?.edge },

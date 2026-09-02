@@ -9,6 +9,7 @@
 - 常驻 daemon：合成与播放排队执行，容量拒绝与进度节流，音量 ducking。
 - Markdown 人设：以 front matter 定义语气、音色与音量，可内置可自定义。
 - Hook 事件：Unix Domain Socket / Named Pipe 分发 `playback.*` 事件，至多一次投递。
+- 可选逐字对齐：音频就绪后并行请求逐字对齐信息，可用于类 karaoke 字幕或可视化进度条。
 - Agent 集成：一键向 Codex、Claude、OpenCode、Copilot、Pi、Kimi Code、ZCode 注入提示词与 Skill。
 - Cinnamon 扩展：桌面右下角对话气泡展示播报内容。
 
@@ -56,6 +57,13 @@ voice-brief status --json
 ```yaml
 provider: audiocpp
 fallbackProvider: fish
+alignment:
+  enabled: true
+  provider: audiocpp
+  audiocpp:
+    baseUrl: http://127.0.0.1:8080/v1
+    model: qwen3-align
+    language: zh
 providers:
   fish:
     apiKeyEnv: FISH_API_KEY
@@ -64,7 +72,12 @@ providers:
 hooks:
   - id: cinnamon
     transport: unix
+    socket: /run/user/1000/voice-brief/cinnamon.sock
 ```
+
+`alignment` 默认关闭，且不属于 TTS provider。打开后，TTS 音频一准备好就会照常进入播放队列；对齐结果若赶上 `playback.ready` 会随该事件发送，否则只会在该条 brief 正处于准备或播放状态时补发 `audio.alignment.ready`。对齐失败不会触发 TTS fallback 或中断播放。
+
+本地 audio.cpp 启动后，可运行 `yarn tiny develop/alignment-smoke` 上传仓库 fixture 并校验对齐结果。该冒烟测试不启动播放器，也不会触发 ducking。
 
 人设示例：
 

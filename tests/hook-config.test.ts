@@ -61,6 +61,33 @@ hooks:
 		});
 	});
 
+	test('alignment 是独立可选配置且不改变配置版本', async () => {
+		const service = await createService(`
+version: 1
+alignment:
+  enabled: true
+  provider: audiocpp
+  audiocpp:
+    baseUrl: http://127.0.0.1:8080/v1
+    model: qwen3-align
+    language: zh
+hooks:
+  - id: cinnamon
+    transport: unix
+    socket: /tmp/cinnamon.sock
+`);
+
+		await expect(service.load()).resolves.toMatchObject({
+			version: 1,
+			alignment: {
+				enabled: true,
+				provider: 'audiocpp',
+				audiocpp: { baseUrl: 'http://127.0.0.1:8080/v1', model: 'qwen3-align', language: 'zh' },
+			},
+			hooks: [{ id: 'cinnamon' }],
+		});
+	});
+
 	test('拒绝重复 Hook id', async () => {
 		const service = await createService(`
 hooks:

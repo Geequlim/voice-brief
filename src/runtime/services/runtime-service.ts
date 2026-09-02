@@ -19,8 +19,15 @@ interface HookEventDetails {
 	reason?: VoiceBriefHookSkipReason;
 }
 
+interface ActivePlayback {
+	alignmentDelivery?: Promise<void>;
+	phase: 'activating' | 'preparing' | 'playing';
+	task: PreparedSpeechTask;
+}
+
 export class VoiceBriefRuntimeService {
 	private $stopping = false;
+	private $activePlayback?: ActivePlayback;
 	private readonly $playbackDelayResolvers = new Set<() => void>();
 
 	constructor(readonly module: VoiceBriefRuntimeModule) {}
@@ -116,24 +123,26 @@ export class VoiceBriefRuntimeService {
 		try {
 			await this.emitHook(task, 'audio.preparing');
 			const result = await resultPromise;
-			stage = 'metadata';
-			const audioDurationMs = result.audioDurationMs ?? await this.module.audioMetadataService.getAudioDurationMs(result.audioFile);
 			const audio: VoiceBriefHookAudio = {
-				alignment: result.alignment,
 				provider: result.provider,
 				source: result.source,
-				durationMs: audioDurationMs,
 			};
-			await this.getConfigModule().stateService.update(state => {
-				state.lastProviderError = undefined;
-			});
-			const prepared = {
+			const prepared: PreparedSpeechTask = {
 				...task,
 				audio,
 				persona,
 				result,
 				volume: this.resolveVolume(result.provider, task.config, persona),
 			};
+			prepared.alignmentTask = this.module.alignmentService.start(prepared);
+			if (prepared.alignmentTask) {
+				void prepared.alignmentTask.completion.then(() => this.onAlignmentReady(prepared));
+			}
+			stage = 'metadata';
+			audio.durationMs = result.audioDurationMs ?? await this.module.audioMetadataService.getAudioDurationMs(result.audioFile);
+			await this.getConfigModule().stateService.update(state => {
+				state.lastProviderError = undefined;
+			});
 			await this.emitHook(prepared, 'audio.ready', { audio });
 			return prepared;
 		} catch (error) {
@@ -160,18 +169,31 @@ export class VoiceBriefRuntimeService {
 			return;
 		}
 
-		await this.emitHook(task, 'playback.ready', { audio: task.audio });
+		this.$activePlayback = { phase: 'activating', task };
+		const readyAudio = this.audioWithAvailableAlignment(task);
+		await this.emitHook(task, 'playback.ready', { audio: readyAudio });
+		const active = this.activePlaybackFor(task);
+		if (!active) return;
+		active.phase = 'preparing';
+		this.flushAlignment(task);
 		await this.waitForPlayback(task.config.playback.startDelayMs);
-		if (this.$stopping) return;
+		if (this.$stopping) {
+			await this.finishActivePlayback(task);
+			return;
+		}
 		try {
 			await this.module.playbackService.playAudioFile(task.paths, task.config, task.result.audioFile, task.volume, async () => {
 				await this.emitHook(task, 'playback.started', { audio: task.audio });
+				const current = this.activePlaybackFor(task);
+				if (current) current.phase = 'playing';
 			});
+			await this.finishActivePlayback(task);
 			await this.emitHook(task, 'playback.completed', { audio: task.audio });
 			await this.getConfigModule().stateService.update(state => {
 				state.lastPlaybackError = undefined;
 			});
 		} catch (error) {
+			await this.finishActivePlayback(task);
 			if (error instanceof VoiceBriefPlaybackStoppedError) return;
 			const message = errorMessage(error, 'unknown playback error');
 			await this.emitHook(task, 'playback.failed', { audio: task.audio, error: { stage: 'playback', message } });
@@ -183,6 +205,7 @@ export class VoiceBriefRuntimeService {
 
 	stop() {
 		this.$stopping = true;
+		this.$activePlayback = undefined;
 		for (const resolve of this.$playbackDelayResolvers) resolve();
 		this.$playbackDelayResolvers.clear();
 	}
@@ -217,6 +240,40 @@ export class VoiceBriefRuntimeService {
 			sequence: task.sequence,
 			...details,
 		});
+	}
+
+	private onAlignmentReady(task: PreparedSpeechTask) {
+		if (!task.alignmentTask?.result || task.alignmentTask.delivered) return;
+		this.flushAlignment(task);
+	}
+
+	private flushAlignment(task: PreparedSpeechTask) {
+		const active = this.activePlaybackFor(task);
+		const alignmentTask = task.alignmentTask;
+		if (!active || active.phase === 'activating' || !alignmentTask?.result || alignmentTask.delivered) return;
+		alignmentTask.delivered = true;
+		const delivery = this.emitHook(task, 'audio.alignment.ready', {
+			audio: { ...task.audio, alignment: alignmentTask.result },
+		}).catch((): undefined => undefined);
+		active.alignmentDelivery = delivery;
+	}
+
+	private audioWithAvailableAlignment(task: PreparedSpeechTask) {
+		const alignmentTask = task.alignmentTask;
+		if (!alignmentTask?.result || alignmentTask.delivered) return task.audio;
+		alignmentTask.delivered = true;
+		return { ...task.audio, alignment: alignmentTask.result };
+	}
+
+	private activePlaybackFor(task: PreparedSpeechTask) {
+		return this.$activePlayback?.task.eventContext.briefId === task.eventContext.briefId ? this.$activePlayback : undefined;
+	}
+
+	private async finishActivePlayback(task: PreparedSpeechTask) {
+		const active = this.activePlaybackFor(task);
+		if (!active) return;
+		this.$activePlayback = undefined;
+		await active.alignmentDelivery;
 	}
 
 	private async waitForPlayback(durationMs: number) {

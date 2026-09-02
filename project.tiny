@@ -38,6 +38,9 @@ develop:
             - name: karaoke
               description: 播放 fixture 音频并展示逐字 KTV 高亮
               command: yarn workspace @tinyaxis/voice-brief-cinnamon smoke karaoke
+            - name: karaoke-late
+              description: 播放开始后延迟接入逐字时间轴并追赶当前进度
+              command: yarn workspace @tinyaxis/voice-brief-cinnamon smoke karaoke-late
     - name: lint
       description: 静态代码分析
       tooltip: 执行 Oxlint / ESLint / 产物与工程卫生检查
@@ -78,6 +81,9 @@ develop:
             - name: cinnamon
               description: 验证 Cinnamon tarball staging
               command: yarn vitest run tools/package-cinnamon.test.mts
+    - name: alignment-smoke
+      description: 上传 fixture 音频到本地 audio.cpp 并校验逐字对齐结果，不播放音频
+      command: yarn jiti tools/smoke-alignment.mts
     - name: compile
       description: 编译全部生产产物
       command:

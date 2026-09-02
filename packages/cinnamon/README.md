@@ -36,11 +36,12 @@ yarn tiny develop/cinnamon/smoke/dialogue
 yarn tiny develop/cinnamon/smoke/multiline
 yarn tiny develop/cinnamon/smoke/no-session
 yarn tiny develop/cinnamon/smoke/karaoke
+yarn tiny develop/cinnamon/smoke/karaoke-late
 ```
 
 默认读取 `~/.config/voice-brief/personas/甜妹助理.md`。可以通过 `VOICE_BRIEF_SMOKE_PERSONA` 指定其他人设文件，通过 `VOICE_BRIEF_CINNAMON_SOCKET` 指定其他 Socket。
 
-`karaoke` 会直接启动 `mpv` 播放仓库暂存的 MP3，并按其 16 kHz 的逐字对齐数据高亮文字；它不会经过 Voice Brief runtime，因此不会触发全局的音频压低。默认使用 `mpv`；如有需要，可通过 `VOICE_BRIEF_KARAOKE_PLAYER` 指定兼容的播放器命令。
+`karaoke` 会在播放就绪时带上时间轴；`karaoke-late` 会在播放 2.5 秒后补发时间轴，用于确认前端直接追赶当前进度。两者都直接启动 `mpv` 播放仓库暂存的 MP3，不经过 Voice Brief runtime，因此不会触发全局音频压低。默认使用 `mpv`；如有需要，可通过 `VOICE_BRIEF_KARAOKE_PLAYER` 指定兼容的播放器命令。
 
 ## 测试
 

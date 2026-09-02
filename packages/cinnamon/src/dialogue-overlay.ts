@@ -187,6 +187,7 @@ class DialogueOverlay {
 	private readonly $textLabel: CinnamonLabel;
 	private $avatarTimeoutId?: number;
 	private $briefId?: string;
+	private $acceptsAlignment = false;
 	private $karaokeAlignment?: KaraokeAlignment;
 	private $karaokeStartUs?: number;
 	private $karaokeText?: string;
@@ -299,11 +300,17 @@ class DialogueOverlay {
 			return;
 		}
 		if (event.event === 'playback.ready') {
-			if (this.$phase === 'holding') {
+			if (this.$phase === 'holding' || this.$phase === 'exiting') {
 				this.$replaceDialogue(event);
 				return;
 			}
 			this.$showDialogue(event);
+			return;
+		}
+		if (event.event === 'audio.alignment.ready') {
+			if (this.$acceptsAlignment && event.briefId === this.$briefId && event.audio?.alignment) {
+				this.$setKaraokeAlignment(event.audio.alignment);
+			}
 			return;
 		}
 		if (event.event === 'playback.started') {
@@ -569,6 +576,7 @@ class DialogueOverlay {
 	private $handleTerminalEvent(briefId: string): void {
 		this.$removePendingBrief(briefId);
 		if (briefId !== this.$briefId) return;
+		this.$acceptsAlignment = false;
 		this.$stopKaraoke();
 		if (this.$pendingBriefIds.size === 0) {
 			this.$hide(briefId);
@@ -702,6 +710,7 @@ class DialogueOverlay {
 		this.$root.scale_x = 1;
 		this.$root.scale_y = 1;
 		this.$briefId = undefined;
+		this.$acceptsAlignment = false;
 		this.$layout = undefined;
 		this.$resetKaraoke();
 		this.$phase = 'idle';
@@ -709,6 +718,7 @@ class DialogueOverlay {
 
 	private $configureLayout(event: VoiceBriefHookEvent): boolean {
 		this.$resetKaraoke();
+		this.$acceptsAlignment = true;
 		const accentColor = this.$resolveAccentColor(event.persona?.color);
 		this.$karaokeAccentColor = accentColor;
 		const personaName = event.persona?.name ?? 'Voice Brief';
@@ -837,10 +847,20 @@ class DialogueOverlay {
 	}
 
 	private $startKaraoke(): void {
-		if (!this.$karaokeAlignment || !this.$karaokeText) return;
 		this.$stopKaraoke();
 		this.$karaokeStartUs = DialogueGLib.get_monotonic_time();
 		this.$renderKaraokeText();
+		this.$ensureKaraokeTimer();
+	}
+
+	private $setKaraokeAlignment(alignment: KaraokeAlignment): void {
+		this.$karaokeAlignment = alignment;
+		this.$renderKaraokeText();
+		this.$ensureKaraokeTimer();
+	}
+
+	private $ensureKaraokeTimer(): void {
+		if (!this.$karaokeStartUs || !this.$karaokeAlignment || !this.$karaokeText || this.$karaokeTickId !== undefined) return;
 		this.$karaokeTickId = DialogueGLib.timeout_add(DialogueGLib.PRIORITY_DEFAULT, KARAOKE_TICK_MS, () => {
 			if (!this.$karaokeStartUs || this.$phase === 'idle' || this.$phase === 'exiting') return DialogueGLib.SOURCE_REMOVE;
 			this.$renderKaraokeText();
@@ -867,7 +887,7 @@ class DialogueOverlay {
 		const alignment = this.$karaokeAlignment;
 		if (!text || !alignment || !this.$isRenderableAlignment(text, alignment)) {
 			this.$textLabel.set_style('');
-			this.$textLabel.text = text ?? '';
+			this.$textLabel.clutter_text.set_markup(this.$escapeMarkup(text ?? ''));
 			return;
 		}
 		const playbackMs = this.$karaokeStartUs === undefined

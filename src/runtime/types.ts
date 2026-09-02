@@ -27,7 +27,6 @@ export interface ProviderCacheDescriptor {
 }
 
 export interface SynthesizeResult {
-	alignment?: SpeechAlignment;
 	audioFile: string;
 	provider: string;
 	audioDurationMs?: number;
@@ -159,8 +158,15 @@ export interface RuntimeSpeechStart {
 }
 
 export interface PreparedSpeechTask extends RuntimeSpeechTask {
+	alignmentTask?: RuntimeAlignmentTask;
 	audio: VoiceBriefHookAudio;
 	persona?: VoicePersona;
 	result: PreparedAudioResult;
 	volume?: number;
+}
+
+export interface RuntimeAlignmentTask {
+	delivered: boolean;
+	result?: SpeechAlignment;
+	completion: Promise<void>;
 }
