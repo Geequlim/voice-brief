@@ -3,10 +3,11 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import { promisify } from 'node:util';
 import { randomUUID } from 'node:crypto';
-import type { VoiceBriefConfig } from '../../config/schema';
+import type { AudioCppAlignmentConfig, VoiceBriefConfig } from '../../config/schema';
 import type { VoiceBriefPaths } from '../../config/types';
 import { createTimedSpeechAlignment } from '../alignment';
 import type { SpeechAlignment } from '../types';
+import { resolveAudioCppModelSource, type AudioCppCatalogEntry } from '../providers/audiocpp-model-catalog';
 
 const executeFile = promisify(execFile);
 type ExecuteFile = (file: string, args: readonly string[]) => Promise<unknown>;
@@ -21,6 +22,10 @@ interface AudioCppAlignmentResponse {
 	words: AudioCppAlignmentWord[];
 }
 
+interface AudioCppModelsResponse {
+	data: Array<{ id: string; loaded?: boolean; }>;
+}
+
 export interface AlignmentInput {
 	audioFile: string;
 	config: VoiceBriefConfig;
@@ -30,11 +35,13 @@ export interface AlignmentInput {
 
 export class AudioCppAlignmentProvider {
 	readonly id = 'audiocpp';
+	private readonly $catalogCache = new Map<string, Map<string, AudioCppCatalogEntry>>();
 	constructor(private readonly $executeFile: ExecuteFile = executeFile) {}
 
 	async align(input: AlignmentInput): Promise<SpeechAlignment> {
 		const config = input.config.alignment.audiocpp;
 		if (!config?.baseUrl || !config.model) throw new Error('audio.cpp alignment 配置缺少 baseUrl 或 model');
+		await this.ensureModelReady(config);
 		const prepared = await this.prepareAudio(input.audioFile, input.paths.tempDir);
 		try {
 			const audio = await fs.readFile(prepared.file);
@@ -44,12 +51,7 @@ export class AudioCppAlignmentProvider {
 			form.append('text', input.text);
 			if (config.language) form.append('language', config.language);
 
-			const headers: Record<string, string> = {};
-			if (config.apiKeyEnv) {
-				const apiKey = process.env[config.apiKeyEnv];
-				if (!apiKey) throw new Error(`环境变量 ${config.apiKeyEnv} 未设置`);
-				headers['authorization'] = `Bearer ${apiKey}`;
-			}
+			const headers = this.createHeaders(config);
 			const response = await fetch(`${config.baseUrl.replace(/\/+$/, '')}/audio/alignments`, {
 				method: 'POST',
 				headers,
@@ -66,6 +68,42 @@ export class AudioCppAlignmentProvider {
 		} finally {
 			if (prepared.temporary) await fs.rm(prepared.file, { force: true }).catch((): undefined => undefined);
 		}
+	}
+
+	private async ensureModelReady(config: AudioCppAlignmentConfig) {
+		if (!config.baseUrl || !config.model) return;
+		const headers = this.createHeaders(config);
+		const timeoutMs = config.timeoutMs ?? 120000;
+		const baseUrl = config.baseUrl.replace(/\/+$/, '');
+		const source = await resolveAudioCppModelSource({
+			baseUrl,
+			family: config.family,
+			model: config.model,
+			modelPath: config.modelPath,
+			task: 'align',
+			headers,
+			cache: this.$catalogCache,
+		});
+		if (!source) return;
+		const modelsResponse = await fetch(`${baseUrl}/models`, { headers, signal: AbortSignal.timeout(timeoutMs) });
+		if (!modelsResponse.ok) throw new Error(`audio.cpp 获取 alignment 模型列表失败: HTTP ${modelsResponse.status} ${await modelsResponse.text()}`);
+		const models = await modelsResponse.json() as AudioCppModelsResponse;
+		if (models.data.some(model => model.id === config.model && model.loaded)) return;
+
+		const response = await fetch(`${baseUrl}/models/load`, {
+			method: 'POST',
+			headers: { 'Content-Type': 'application/json', ...headers },
+			body: JSON.stringify({ id: config.model, family: source.family, path: source.path, task: source.task, mode: source.mode }),
+			signal: AbortSignal.timeout(timeoutMs),
+		});
+		if (!response.ok) throw new Error(`audio.cpp 自动加载 alignment 模型失败: ${config.model} (${response.status} ${(await response.text()).slice(0, 200)})`);
+	}
+
+	private createHeaders(config: AudioCppAlignmentConfig): Record<string, string> {
+		if (!config.apiKeyEnv) return {};
+		const apiKey = process.env[config.apiKeyEnv];
+		if (!apiKey) throw new Error(`环境变量 ${config.apiKeyEnv} 未设置`);
+		return { authorization: `Bearer ${apiKey}` };
 	}
 
 	private async prepareAudio(audioFile: string, tempDir: string) {

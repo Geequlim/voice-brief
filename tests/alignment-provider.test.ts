@@ -10,6 +10,12 @@ import { VoiceBriefCacheService } from '../src/runtime/services/cache-service';
 import { VoiceBriefAlignmentService } from '../src/runtime/services/alignment-service';
 import type { PreparedSpeechTask } from '../src/runtime/types';
 
+const httpGet = vi.hoisted(() => vi.fn());
+
+vi.mock('../src/infrastructure/http', () => ({
+	default: { get: httpGet },
+}));
+
 const roots: string[] = [];
 
 function createConfig(): VoiceBriefConfig {
@@ -81,6 +87,7 @@ function stubAlignmentResponse(onRequest?: (form: FormData) => void) {
 
 afterEach(async () => {
 	vi.restoreAllMocks();
+	httpGet.mockReset();
 	await Promise.all(roots.splice(0).map(root => fs.rm(root, { recursive: true, force: true })));
 });
 
@@ -104,6 +111,34 @@ describe('AudioCppAlignmentProvider', () => {
 		expect(execute).not.toHaveBeenCalled();
 		expect(result.cues.map(cue => cue.text)).toEqual(['任', '务']);
 		expect(result.cues[1]).toMatchObject({ startChar: 1, endChar: 2, startMs: 100, endMs: 200 });
+	});
+
+	test('从模型目录发现来源并自动加载未登记的 alignment 模型', async () => {
+		const paths = await createPaths();
+		const audioFile = path.join(paths.configDir, 'audio.wav');
+		await fs.writeFile(audioFile, wavBytes());
+		const config = createConfig();
+		const fetch = vi.spyOn(globalThis, 'fetch').mockImplementation(async (url, init) => {
+			if (String(url).endsWith('/models')) return new Response(JSON.stringify({ data: [] }));
+			if (String(url).endsWith('/models/load')) {
+				expect(init?.method).toBe('POST');
+				expect(init?.body).toBe(JSON.stringify({
+					id: 'qwen3-align',
+					family: 'qwen3_forced_aligner',
+					path: '/app/models/Qwen3-ForcedAligner-0.6B-GGUF/qwen3-forced-aligner-0.6b-q8_0.gguf',
+					task: 'align',
+					mode: 'offline',
+				}));
+				return new Response('{}');
+			}
+			return new Response(JSON.stringify({ words: [{ word: '任', start: 0, end: 0.1 }, { word: '务', start: 0.1, end: 0.2 }] }));
+		});
+		httpGet.mockResolvedValueOnce({ models_root: '/app/models' })
+			.mockResolvedValueOnce('<script>{"id":"qwen3-align","family":"qwen3_forced_aligner","path":"models/Qwen3-ForcedAligner-0.6B-GGUF/qwen3-forced-aligner-0.6b-q8_0.gguf","task":"align","mode":"offline"}</script>');
+
+		await new AudioCppAlignmentProvider(vi.fn()).align({ audioFile, config, paths, text: '任务' });
+
+		expect(fetch).toHaveBeenCalledTimes(3);
 	});
 
 	test('44.1k WAV 不符合对齐输入要求并执行转换', async () => {

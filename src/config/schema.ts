@@ -89,8 +89,10 @@ export const AudioCppPersonaConfigSchema = Type.Object(AudioCppProviderOptions, 
 export const AudioCppAlignmentConfigSchema = Type.Object({
 	apiKeyEnv: Type.Optional(Type.String({ minLength: 1 })),
 	baseUrl: Type.Optional(Type.String({ minLength: 1 })),
+	family: Type.Optional(Type.String({ minLength: 1 })),
 	language: Type.Optional(Type.String({ minLength: 1 })),
 	model: Type.Optional(Type.String({ minLength: 1 })),
+	modelPath: Type.Optional(Type.String({ minLength: 1 })),
 	timeoutMs: Type.Optional(Type.Number({ minimum: 1 })),
 }, { additionalProperties: false });
 

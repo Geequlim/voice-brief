@@ -10,6 +10,7 @@ import type { VoicePersona } from '../../persona/types';
 import type { ProviderCacheDescriptor, ProviderCheckResult, SynthesizeInput, SynthesizeResult } from '../types';
 import type { OpenAiSpeechRequest } from './openai-provider';
 import { OpenAiProvider } from './openai-provider';
+import { resolveAudioCppModelSource, type AudioCppCatalogEntry, type AudioCppModelSource } from './audiocpp-model-catalog';
 
 const $execFile = promisify(execFile);
 
@@ -21,21 +22,6 @@ type AudioCppSpeechRequest = OpenAiSpeechRequest & {
 
 type AudioCppModelsResponse = {
 	data: Array<{ id: string; task?: string; loaded?: boolean; }>;
-};
-
-type AudioCppCatalogEntry = {
-	id: string;
-	family?: string;
-	path?: string;
-	task?: string;
-	mode?: string;
-};
-
-type AudioCppModelSource = {
-	family: string;
-	path: string;
-	task: string;
-	mode: string;
 };
 
 export class AudioCppProvider extends OpenAiProvider {
@@ -117,90 +103,15 @@ export class AudioCppProvider extends OpenAiProvider {
 	}
 
 	private async resolveModelSource(options: AudioCppProviderConfig): Promise<AudioCppModelSource | undefined> {
-		if (options.family && options.modelPath) {
-			return { family: options.family, path: options.modelPath, task: 'tts', mode: 'offline' };
-		}
-		const entry = await this.fetchCatalogEntry(options);
-		if (!entry?.family || !entry?.path) return undefined;
-		return {
-			family: entry.family,
-			path: entry.path,
-			task: entry.task ?? 'tts',
-			mode: entry.mode ?? 'offline',
-		};
-	}
-
-	private async fetchCatalogEntry(options: AudioCppProviderConfig): Promise<AudioCppCatalogEntry | undefined> {
-		const baseUrl = options.baseUrl ?? this.$defaultBaseUrl;
-		let catalog = this.$catalogCache.get(baseUrl);
-		if (!catalog) {
-			catalog = await this.parseCatalog(baseUrl, this.createHeaders(options));
-			this.$catalogCache.set(baseUrl, catalog);
-		}
-		return options.model ? catalog.get(options.model) : undefined;
-	}
-
-	private async parseCatalog(baseUrl: string, headers: Record<string, string>): Promise<Map<string, AudioCppCatalogEntry>> {
-		const catalog = new Map<string, AudioCppCatalogEntry>();
-		try {
-			const root = await http.get<{ models_root?: string; }>(this.joinUrl(baseUrl, 'ui/models-root'), undefined, headers);
-			const html = await http.get<string>(new URL(baseUrl).origin, undefined, headers);
-			for (const entry of this.extractCatalogEntries(html)) {
-				entry.path = this.resolveModelPath(entry.path ?? '', root.models_root ?? '/app/models');
-				catalog.set(entry.id, entry);
-			}
-		} catch {
-			return catalog;
-		}
-		return catalog;
-	}
-
-	private resolveModelPath(modelPath: string, modelsRoot: string) {
-		if (path.isAbsolute(modelPath)) return modelPath;
-		return path.join(path.dirname(modelsRoot), modelPath);
-	}
-
-	private extractCatalogEntries(html: string): AudioCppCatalogEntry[] {
-		const entries: AudioCppCatalogEntry[] = [];
-		const seen = new Set<string>();
-		let cursor = 0;
-		while (entries.length < 200) {
-			const marker = html.indexOf('"id":"', cursor);
-			if (marker < 0) break;
-			cursor = marker + 6;
-			const end = this.extractJsonEntry(html, marker);
-			if (end < 0) continue;
-			const start = html.lastIndexOf('{', marker);
-			try {
-				const entry = JSON.parse(html.slice(start, end)) as AudioCppCatalogEntry;
-				if (entry?.id && entry.family && entry.path && !seen.has(entry.id)) {
-					seen.add(entry.id);
-					entries.push(entry);
-				}
-			} catch {}
-		}
-		return entries;
-	}
-
-	private extractJsonEntry(html: string, marker: number) {
-		const start = html.lastIndexOf('{', marker);
-		if (start < 0) return -1;
-		let depth = 0;
-		let inString = false;
-		let escaped = false;
-		for (let i = start; i < html.length; i++) {
-			const ch = html[i];
-			if (escaped) { escaped = false; continue; }
-			if (ch === '\\') { escaped = true; continue; }
-			if (ch === '"') { inString = !inString; continue; }
-			if (inString) continue;
-			if (ch === '{') depth++;
-			if (ch === '}') {
-				depth--;
-				if (depth === 0) return i + 1;
-			}
-		}
-		return -1;
+		return resolveAudioCppModelSource({
+			baseUrl: options.baseUrl ?? this.$defaultBaseUrl,
+			family: options.family,
+			model: options.model,
+			modelPath: options.modelPath,
+			task: 'tts',
+			headers: this.createHeaders(options),
+			cache: this.$catalogCache,
+		});
 	}
 
 	private async ensureModelReady(options: AudioCppProviderConfig) {
