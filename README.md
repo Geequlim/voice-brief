@@ -2,6 +2,10 @@
 
 本机语音简报工具。它把编码 agent 的最终回复或任务过程状态合成为语音播放，让你在不持续盯着屏幕的情况下了解任务进展。内置多 TTS provider、常驻 daemon、节流与缓存、Hook 事件分发，以及 Cinnamon 桌面对话气泡扩展。
 
+## 演示
+
+[点击此处打开演示](https://github.com/user-attachments/assets/f0ca86ee-7a6e-424e-a659-20895fc2b714)
+
 ## 特性
 
 - 一条命令播报：`voice-brief speak <文本>`，支持最终简报与过程播报两种模式。
