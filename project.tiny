@@ -48,6 +48,7 @@ develop:
         - yarn oxlint -c oxlint.config.mts -f stylish src tests tools packages/cinnamon/src packages/cinnamon/tests
         - yarn eslint .
         - node tools/check-package.mts
+        - node tools/check-docs.mts
         - echo "Lint 检查完成"
       actions:
         - name: fix

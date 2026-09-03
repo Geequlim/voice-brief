@@ -1,50 +1,141 @@
-# Voice Brief Cinnamon
+English | [简体中文](https://github.com/Geequlim/voice-brief/blob/main/packages/cinnamon/README.zh-CN.md)
 
-Voice Brief 的 Cinnamon 桌面扩展子包。源码使用 TypeScript 编写，由 `tsc` 编译为 Cinnamon 可加载的 GJS JavaScript；扩展运行时不依赖 Node.js。
+# Cinnamon extension
 
-扩展启用后监听 `$XDG_RUNTIME_DIR/voice-brief/cinnamon.sock`，接收一行 NDJSON 格式的 Voice Brief Hook 事件。Hook Server 启动后，扩展通过 `voice-brief runtime configure` 按自身动画常量设置播放启动延迟；收到单向的 `playback.ready` 时在主显示器依次执行头像与完整对话入场动画。合成和排队事件不会产生可见中间态，播放结束、失败或跳过时关闭。
+The official Voice Brief hook consumer for the Cinnamon desktop. While Voice Brief speaks, the extension shows a dialogue card on the primary monitor with the persona name, avatar, and accent color, and highlights words in sync with the audio (karaoke subtitles) when [word alignment](https://github.com/Geequlim/voice-brief/blob/main/docs/alignment.md) is enabled.
 
-## 开发
+Extension UUID: `voice-brief@tinyaxis`. Requires Cinnamon 6.6 on Linux.
 
-- `src/extension.ts`：扩展生命周期入口。
-- `src/dialogue-overlay.ts`：桌面对话展示与事件生命周期。
-- `src/lib/protocol.ts`：Hook 协议输入校验。
-- `src/lib/hook-server.ts`：Gio Unix Socket 服务。
-- `assets/`：Cinnamon 扩展元数据和样式。
-- `dist/voice-brief@tinyaxis/`：生成的可安装扩展目录，不提交到仓库。
+## Install
 
-构建扩展：
+The npm package ships the built extension and installs it as a postinstall step:
 
 ```bash
-yarn workspace @tinyaxis/voice-brief-cinnamon build
+npm install -g @tinyaxis/voice-brief-cinnamon
 ```
 
-构建、安装到当前用户并让 Cinnamon 重载扩展：
+This copies the extension to `~/.local/share/cinnamon/extensions/voice-brief@tinyaxis` (honors `XDG_DATA_HOME`). The install is atomic, keeps a backup until it succeeds, and never enables or reloads the extension by itself.
+
+Enable it in **System Settings → Extensions → Voice Brief**.
+
+## Connect Voice Brief
+
+The extension listens on a Unix socket from the moment it is enabled:
+
+```text
+$XDG_RUNTIME_DIR/voice-brief/cinnamon.sock
+```
+
+On a typical session this resolves to `/run/user/1000/voice-brief/cinnamon.sock`, and the socket directory is created with owner-only permissions. Register the same path as a hook in the Voice Brief configuration (run `voice-brief status --json` to find the active config file):
+
+```yaml
+hooks:
+  - id: cinnamon
+    transport: unix
+    socket: /run/user/1000/voice-brief/cinnamon.sock
+    timeoutMs: 1000
+```
+
+Then verify with a test briefing:
 
 ```bash
-yarn tiny develop/cinnamon
+voice-brief speak "Cinnamon overlay check."
 ```
 
-### 视觉冒烟测试
+Every event is validated (protocol version, event name, field types) before it reaches the UI; malformed events are dropped and logged without affecting other hooks or playback. The complete event contract is documented in [Hooks and custom consumers](https://github.com/Geequlim/voice-brief/blob/main/docs/hooks.md).
 
-扩展安装并启用后，可以直接向 Hook Socket 注入测试事件，不会请求 TTS 或播放语音：
+## Display settings
+
+Open the extension settings from **System Settings → Extensions → Voice Brief** (the dialog labels are localized in Chinese):
+
+| Setting | Options | Default |
+| --- | --- | --- |
+| Screen position (屏幕位置) | `top` (靠顶部), `bottom` (靠底部) | `top` |
+| Screen margin (屏幕边距) | 0–512 px, 8 px steps | `112` |
+
+The dialogue is placed on the primary monitor only and stays visible in fullscreen. Position changes apply to the currently visible dialogue immediately.
+
+## Persona appearance
+
+Name, avatar, and accent color come from the active persona front matter — the same fields documented in [TTS and personas](https://github.com/Geequlim/voice-brief/blob/main/docs/tts-and-personas.md):
+
+- `name` — card title; falls back to `Voice Brief`.
+- `avatar` — path to a local image file. When missing or unreadable, the avatar is omitted and the text card fades in directly.
+- `color` — six-digit hex color used for the border, the name, and the karaoke highlight; falls back to `#eb4272`.
+
+The context line under the title shows the session name when available, otherwise `agent · model`, and is hidden when neither is present.
+
+## Dialogue behavior
+
+- A new briefing plays a short entrance animation: the avatar pops in, then the dialogue expands and settles.
+- A queued follow-up keeps the panel visible and replaces the content in place with a single emphasis animation.
+- Press `Esc` or the on-card hide button to dismiss the current briefing. Later events for a dismissed briefing are ignored until it finishes.
+- Terminal events (`playback.completed`, `playback.failed`, `playback.skipped`, `audio.failed`) hide the card, unless another briefing is already queued.
+
+## Karaoke subtitles
+
+When word alignment is available, spoken words are highlighted in sync with playback: upcoming text is gray, the current word is bold and blends toward the accent color, and spoken words keep a lighter accent tint. Highlighting starts with `playback.started` and refreshes about 30 times per second.
+
+- Alignment arriving after playback started (`audio.alignment.ready`) is applied immediately and catches up to the current playback position.
+- Without alignment, or when cues do not exactly match the briefing text, the card renders plain static text. Missing highlighting never affects audio.
+
+## Playback start delay
+
+The entrance animation takes about 1.2 seconds. So speech does not start before the dialogue is fully visible, enabling the extension runs:
 
 ```bash
-yarn tiny develop/cinnamon/smoke
-yarn tiny develop/cinnamon/smoke/entrance
-yarn tiny develop/cinnamon/smoke/dialogue
-yarn tiny develop/cinnamon/smoke/multiline
-yarn tiny develop/cinnamon/smoke/no-session
-yarn tiny develop/cinnamon/smoke/karaoke
-yarn tiny develop/cinnamon/smoke/karaoke-late
+voice-brief runtime configure --playback-start-delay-ms 1150
 ```
 
-默认读取 `~/.config/voice-brief/personas/甜妹助理.md`。可以通过 `VOICE_BRIEF_SMOKE_PERSONA` 指定其他人设文件，通过 `VOICE_BRIEF_CINNAMON_SOCKET` 指定其他 Socket。
+This writes the shared `playback.startDelayMs` setting documented in [Configuration](https://github.com/Geequlim/voice-brief/blob/main/docs/configuration.md). If the `voice-brief` executable is not on `PATH` at that moment, the step is skipped with a log entry; the overlay still works, but speech may start during the animation. Toggle the extension off and on after installing the CLI to apply the delay.
 
-`karaoke` 会在播放就绪时带上时间轴；`karaoke-late` 会在播放 2.5 秒后补发时间轴，用于确认前端直接追赶当前进度。两者都直接启动 `mpv` 播放仓库暂存的 MP3，不经过 Voice Brief runtime，因此不会触发全局音频压低。默认使用 `mpv`；如有需要，可通过 `VOICE_BRIEF_KARAOKE_PLAYER` 指定兼容的播放器命令。
+## Update and uninstall
 
-## 测试
+Update to a new version:
 
 ```bash
-yarn workspace @tinyaxis/voice-brief-cinnamon test
+npm install -g @tinyaxis/voice-brief-cinnamon
 ```
+
+The postinstall script replaces the extension files. Reload the extension afterwards — toggle it in System Settings, or run:
+
+```bash
+gdbus call --session --dest org.Cinnamon --object-path /org/Cinnamon \
+  --method org.Cinnamon.ReloadXlet voice-brief@tinyaxis EXTENSION
+```
+
+Uninstalling the npm package does not remove the installed extension. To remove everything:
+
+1. Disable the extension in System Settings.
+2. Delete `~/.local/share/cinnamon/extensions/voice-brief@tinyaxis`.
+3. Remove the `hooks` entry from the Voice Brief configuration and reset the delay with `voice-brief runtime configure --playback-start-delay-ms 0`.
+
+## Troubleshooting
+
+- **No dialogue appears.** Confirm the extension is enabled, the socket file exists (`ls "$XDG_RUNTIME_DIR/voice-brief/cinnamon.sock"`), and the `hooks` entry in the Voice Brief configuration points to the same path. Then send a test briefing.
+- **A log entry says the playback start delay was not configured.** `voice-brief` was not on `PATH` when the extension started. Install the CLI, then toggle the extension off and on.
+- **Speech plays but text stays static.** Alignment is unavailable or misconfigured; the overlay intentionally falls back to plain text. See [Word alignment](https://github.com/Geequlim/voice-brief/blob/main/docs/alignment.md).
+- **Events are rejected in the log.** The event failed validation and was dropped; other hooks and audio playback are not affected.
+
+## Development
+
+From a repository checkout:
+
+| Command | Purpose |
+| --- | --- |
+| `yarn tiny develop/cinnamon` | Build, install, and reload the extension in one step |
+| `yarn tiny develop/cinnamon/install` | Build and install without reloading |
+| `yarn tiny develop/cinnamon/smoke [scenario]` | Visual smoke scenarios (see below) |
+| `yarn tiny test/cinnamon` | GJS unit tests for the extension |
+
+Source layout: `src/extension.ts` (lifecycle and settings), `src/dialogue-overlay.ts` (dialogue UI and event handling), `src/lib/protocol.ts` (event validation), `src/lib/hook-server.ts` (Unix socket server), `assets/` (metadata, settings schema, stylesheet).
+
+Smoke scenarios: `entrance`, `dialogue`, `multiline`, `no-session`, `queue`, `karaoke`, `karaoke-late`, or `all` (everything except the karaoke fixtures). They connect directly to the running extension's socket, so the extension must be enabled, and they do not involve the daemon. Set `VOICE_BRIEF_SMOKE_PERSONA` to use a different persona file and `VOICE_BRIEF_CINNAMON_SOCKET` to target a non-default socket. The `karaoke` scenarios play a fixture audio file through `mpv` (override with `VOICE_BRIEF_KARAOKE_PLAYER`); that player identifies itself as `voice-brief-cinnamon-smoke` and is excluded from [audio ducking](https://github.com/Geequlim/voice-brief/blob/main/docs/linux-ducking.md), so smoke runs never lower other applications' volume.
+
+## Related documentation
+
+- [Hooks and custom consumers](https://github.com/Geequlim/voice-brief/blob/main/docs/hooks.md)
+- [Word alignment](https://github.com/Geequlim/voice-brief/blob/main/docs/alignment.md)
+- [TTS and personas](https://github.com/Geequlim/voice-brief/blob/main/docs/tts-and-personas.md)
+- [Linux audio ducking](https://github.com/Geequlim/voice-brief/blob/main/docs/linux-ducking.md)
+- [Configuration](https://github.com/Geequlim/voice-brief/blob/main/docs/configuration.md)
