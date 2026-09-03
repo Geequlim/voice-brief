@@ -1,6 +1,6 @@
 {
 	"name": "@tinyaxis/voice-brief-cinnamon",
-	"version": "0.4.5",
+	"version": "0.4.6",
 	"description": "Cinnamon desktop overlay for Voice Brief hook events",
 	"private": true,
 	"scripts": {
