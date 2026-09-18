@@ -6,6 +6,7 @@ import { SocksProxyAgent } from 'socks-proxy-agent';
 import { WebSocket } from 'ws';
 import type { VoiceBriefConfig } from '../../config/schema';
 import type { VoicePersona } from '../../persona/types';
+import { firstEnvValue, shouldBypassProxyUrl } from '../../infrastructure/http';
 import type { ProviderCacheDescriptor, ProviderCheckResult, SynthesizeInput, SynthesizeResult, TtsProvider } from '../types';
 import type { VoiceBriefRuntimeModule } from '../index';
 import type { RawData } from 'ws';
@@ -293,33 +294,7 @@ export class EdgeProvider implements TtsProvider {
 	}
 
 	private resolveProxyUrl(url: URL) {
-		if (this.shouldBypassProxy(url)) return undefined;
-		return this.firstEnvValue('HTTPS_PROXY', 'https_proxy', 'HTTP_PROXY', 'http_proxy', 'ALL_PROXY', 'all_proxy');
-	}
-
-	private shouldBypassProxy(url: URL) {
-		const noProxy = this.firstEnvValue('NO_PROXY', 'no_proxy');
-		if (!noProxy) return false;
-		const hostname = url.hostname.toLowerCase();
-		const port = url.port;
-		for (const rawEntry of noProxy.split(/[,\s]+/)) {
-			const entry = rawEntry.trim().toLowerCase();
-			if (!entry) continue;
-			if (entry === '*') return true;
-			const [host, entryPort] = entry.split(':');
-			if (entryPort && entryPort !== port) continue;
-			if (host.startsWith('*.') && hostname.endsWith(host.slice(1))) return true;
-			if (host.startsWith('.') && hostname.endsWith(host)) return true;
-			if (hostname === host) return true;
-		}
-		return false;
-	}
-
-	private firstEnvValue(...names: string[]) {
-		for (const name of names) {
-			const value = process.env[name];
-			if (value) return value;
-		}
-		return undefined;
+		if (shouldBypassProxyUrl(url)) return undefined;
+		return firstEnvValue('HTTPS_PROXY', 'https_proxy', 'HTTP_PROXY', 'http_proxy', 'ALL_PROXY', 'all_proxy');
 	}
 }

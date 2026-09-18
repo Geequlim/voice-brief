@@ -58,7 +58,7 @@ export class OpenAiProvider implements TtsProvider {
 	async synthesize(input: SynthesizeInput): Promise<SynthesizeResult> {
 		const options = this.getOptions(input.config, input.persona);
 		const request = await this.createRequest(input.text, options, input.paths);
-		const response = await http.post<ArrayBuffer | ArrayBufferView>(this.speechUrl(options), request, this.createHeaders(options), { responseType: 'arraybuffer' });
+		const response = await http.post<ArrayBuffer | ArrayBufferView>(this.speechUrl(options), request, this.createHeaders(options), { responseType: 'arraybuffer', timeoutMs: options.timeoutMs });
 		const audioFile = path.join(input.paths.tempDir, `voice-brief-${randomUUID()}.${this.getExtension(options)}`);
 		await fs.mkdir(path.dirname(audioFile), { recursive: true });
 		await fs.writeFile(audioFile, this.toAudioBuffer(response));

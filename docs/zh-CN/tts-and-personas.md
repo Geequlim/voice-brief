@@ -35,6 +35,8 @@ providers:
 
 `concurrency` 只属于全局 Provider 配置。达到并发上限时 Voice Brief 可以尝试 fallback；人设不能修改并发数。
 
+`fish`、`openai` 和 `audiocpp` 支持 `timeoutMs` 覆盖语音合成请求的超时时间，默认 30000 毫秒。本地 GPU 推理慢于实时，长文本被兜底到云端时优先调大该值而不是缩短简报。
+
 ### audio.cpp 模型加载
 
 配置模型 ID 后，Voice Brief 会先查询 `/models`。如果模型未加载，可以从 audio.cpp 模型目录自动发现 family 和路径并加载。显式配置的 `family` 与 `modelPath` 优先于自动发现。

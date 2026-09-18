@@ -35,6 +35,8 @@ Keep credentials in environment variables. `apiKeyEnv` contains the variable nam
 
 `concurrency` is a global provider setting. When its limit is reached, Voice Brief may use the fallback provider. Persona provider blocks do not change concurrency.
 
+`fish`, `openai`, and `audiocpp` accept `timeoutMs` to override the request timeout for speech synthesis (default 30000). Local GPU inference is slower than realtime, so raise this value instead of shortening briefs when long texts fall back to the cloud provider.
+
 ### audio.cpp model loading
 
 For a configured model ID, Voice Brief first checks `/models`. If the model is not loaded, it can discover its family and path from the audio.cpp model catalog and load it automatically. Explicit `family` and `modelPath` values take priority over catalog discovery.

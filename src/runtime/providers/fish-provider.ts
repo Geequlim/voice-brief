@@ -66,7 +66,7 @@ export class FishProvider implements TtsProvider {
 			this.ttsUrl(options),
 			request,
 			this.createHeaders(options),
-			{ responseType: 'arraybuffer' },
+			{ responseType: 'arraybuffer', timeoutMs: options.timeoutMs },
 		);
 	}
 

@@ -14,6 +14,7 @@ const FishProviderOptions = {
 	format: Type.Optional(Type.Union([FishAudioFormatSchema, Type.Null()])),
 	model: Type.Optional(Type.String({ minLength: 1 })),
 	referenceId: Type.Optional(Type.String({ minLength: 1 })),
+	timeoutMs: Type.Optional(Type.Number({ minimum: 1 })),
 	volume: Type.Optional(Type.Number({ minimum: 0, maximum: 4 })),
 } as const;
 
@@ -55,6 +56,7 @@ const OpenAiProviderOptions = {
 	baseUrl: Type.Optional(Type.String({ minLength: 1 })),
 	format: Type.Optional(Type.Union([OpenAiSpeechFormatSchema, Type.Null()])),
 	model: Type.Optional(Type.String({ minLength: 1 })),
+	timeoutMs: Type.Optional(Type.Number({ minimum: 1 })),
 	voice: Type.Optional(Type.String({ minLength: 1 })),
 	volume: Type.Optional(Type.Number({ minimum: 0, maximum: 4 })),
 } as const;
@@ -74,6 +76,7 @@ const AudioCppProviderOptions = {
 	modelPath: Type.Optional(Type.String({ minLength: 1 })),
 	referenceText: Type.Optional(Type.String({ minLength: 1 })),
 	seed: Type.Optional(Type.Integer({ minimum: 0 })),
+	timeoutMs: Type.Optional(Type.Number({ minimum: 1 })),
 	voice: Type.Optional(Type.String({ minLength: 1 })),
 	voiceRef: Type.Optional(Type.String({ minLength: 1 })),
 	volume: Type.Optional(Type.Number({ minimum: 0, maximum: 4 })),
