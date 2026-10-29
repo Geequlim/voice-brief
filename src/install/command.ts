@@ -40,7 +40,7 @@ export class VoiceBriefInstallCommandGroup extends VoiceBriefInstallCommand {
 	static readonly InstallActionSchema = {
 		args: [
 			{ name: 'persona', schema: Type.String({ description: '人设文件名，可省略 .md' }) },
-			{ name: 'target', schema: Type.String({ description: 'codex、claude、opencode、copilot、pi、kimi-code 或 zcode' }) },
+			{ name: 'target', schema: Type.String({ description: 'codex、claude、opencode、copilot、pi、kimi-code、zcode 或 dsh' }) },
 		],
 		options: {
 			dryRun: DryRunOption,
@@ -70,7 +70,7 @@ export class VoiceBriefInstallCommandGroup extends VoiceBriefInstallCommand {
 export class VoiceBriefUninstallCommandGroup extends VoiceBriefInstallCommand {
 	static readonly UninstallActionSchema = {
 		args: [
-			{ name: 'target', schema: Type.String({ description: 'codex、claude、opencode、copilot、pi、kimi-code 或 zcode' }) },
+			{ name: 'target', schema: Type.String({ description: 'codex、claude、opencode、copilot、pi、kimi-code、zcode 或 dsh' }) },
 		],
 		options: {
 			dryRun: DryRunOption,

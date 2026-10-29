@@ -52,7 +52,7 @@ voice-brief toggle
 - Unix socket and stdin hooks for desktop UIs and custom integrations.
 - Optional word alignment that never blocks TTS or playback.
 - Linux PulseAudio/PipeWire audio ducking with crash recovery.
-- Agent integrations for Codex, Claude, OpenCode, Copilot, Pi, Kimi Code, and ZCode.
+- Agent integrations for Codex, Claude, OpenCode, Copilot, Pi, Kimi Code, ZCode, and DeepSeek Harness.
 
 ## Agent integration
 
@@ -64,7 +64,7 @@ voice-brief install "默认中文助理" codex --dry-run
 voice-brief install "默认中文助理" codex
 ```
 
-Supported targets are `codex`, `claude`, `opencode`, `copilot`, `pi`, `kimi-code`, and `zcode`.
+Supported targets are `codex`, `claude`, `opencode`, `copilot`, `pi`, `kimi-code`, `zcode`, and `dsh`.
 
 ## Development
 

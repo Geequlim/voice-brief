@@ -62,12 +62,12 @@ describe('CLI 帮助快照', () => {
 
 	test('install --help 帮助与快照一致', async () => {
 		const text = await captureHelp(['install', '--help']);
-		expect(text).toBe('Usage: voice-brief install [options] <persona> <target>\n\n安装 agent 全局提示词支持\n\nArguments:\n  persona                      人设文件名，可省略 .md\n  target                       codex、claude、opencode、copilot、pi、kimi-code 或\n                               zcode\n\nOptions:\n  --dry-run                    只输出将要修改的文件，不写入磁盘\n  --verbose <enabled> [value]  是否开启过程播报: true、false、on 或 off\n  -h, --help                   display help for command\n');
+		expect(text).toBe('Usage: voice-brief install [options] <persona> <target>\n\n安装 agent 全局提示词支持\n\nArguments:\n  persona                      人设文件名，可省略 .md\n  target                       codex、claude、opencode、copilot、pi、kimi-code、zcode\n                               或 dsh\n\nOptions:\n  --dry-run                    只输出将要修改的文件，不写入磁盘\n  --verbose <enabled> [value]  是否开启过程播报: true、false、on 或 off\n  -h, --help                   display help for command\n');
 	});
 
 	test('uninstall --help 帮助与快照一致', async () => {
 		const text = await captureHelp(['uninstall', '--help']);
-		expect(text).toBe('Usage: voice-brief uninstall [options] <target>\n\n移除 agent 全局提示词支持\n\nArguments:\n  target      codex、claude、opencode、copilot、pi、kimi-code 或 zcode\n\nOptions:\n  --dry-run   只输出将要修改的文件，不写入磁盘\n  -h, --help  display help for command\n');
+		expect(text).toBe('Usage: voice-brief uninstall [options] <target>\n\n移除 agent 全局提示词支持\n\nArguments:\n  target      codex、claude、opencode、copilot、pi、kimi-code、zcode 或 dsh\n\nOptions:\n  --dry-run   只输出将要修改的文件，不写入磁盘\n  -h, --help  display help for command\n');
 	});
 
 	test('persona --help 帮助与快照一致', async () => {

@@ -52,7 +52,7 @@ voice-brief toggle
 - Unix Socket 与 stdin Hook 可接入桌面界面或其他消费者。
 - 可选逐字对齐，异常时不会阻塞 TTS 或播放。
 - Linux PulseAudio/PipeWire 音频压低，并支持异常恢复。
-- 一键集成 Codex、Claude、OpenCode、Copilot、Pi、Kimi Code 和 ZCode。
+- 一键集成 Codex、Claude、OpenCode、Copilot、Pi、Kimi Code、ZCode 和 DeepSeek Harness。
 
 ## Agent 集成
 
@@ -64,7 +64,7 @@ voice-brief install "默认中文助理" codex --dry-run
 voice-brief install "默认中文助理" codex
 ```
 
-支持的目标包括 `codex`、`claude`、`opencode`、`copilot`、`pi`、`kimi-code` 和 `zcode`。
+支持的目标包括 `codex`、`claude`、`opencode`、`copilot`、`pi`、`kimi-code`、`zcode` 和 `dsh`。
 
 ## 开发
 

@@ -59,6 +59,7 @@ agent 配置位置：
 - Pi: `PI_CODING_AGENT_DIR` 或 `~/.pi/agent`。协议注入到 `AGENTS.md`，技能文件安装到 `~/.agents/skills/voice-brief/SKILL.md`。
 - Kimi Code: 协议注入到 `~/.kimi-code/AGENTS.md`，技能文件安装到 `~/.agents/skills/voice-brief/SKILL.md`。
 - ZCode: `ZCODE_HOME` 或 `~/.zcode`。协议注入到 `AGENTS.md`，技能文件安装到 `~/.agents/skills/voice-brief/SKILL.md`。
+- DeepSeek Harness: `DSH_HOME` 或 `~/.dsh`。协议注入到 `AGENTS.md`，技能文件安装到 `~/.agents/skills/voice-brief/SKILL.md`。
 
 ## 人设文件
 
@@ -182,6 +183,7 @@ voice-brief install "甜妹助理" copilot
 voice-brief install "甜妹助理" pi
 voice-brief install "甜妹助理" kimi-code
 voice-brief install "甜妹助理" zcode
+voice-brief install "甜妹助理" dsh
 ```
 
 关闭过程播报后安装：
@@ -206,6 +208,7 @@ voice-brief uninstall copilot
 voice-brief uninstall pi
 voice-brief uninstall kimi-code
 voice-brief uninstall zcode
+voice-brief uninstall dsh
 ```
 
 ## 推荐工作流
@@ -216,7 +219,7 @@ voice-brief uninstall zcode
 2. 运行 `voice-brief doctor`，检查 provider 和播放器。
 3. 运行 `voice-brief persona list`，确认可用人设。
 4. 如果用户没指定人设，询问使用哪个人设；不要擅自安装不确定的人设。
-5. 运行 `voice-brief install "<人设名称>" codex|claude|opencode|copilot|pi|kimi-code|zcode`。
+5. 运行 `voice-brief install "<人设名称>" codex|claude|opencode|copilot|pi|kimi-code|zcode|dsh`。
 6. 运行 `voice-brief speak "<简短试听文本>" -p "<人设名称>"`，帮助用户确认声音效果。
 
 用户要求更换 agent 人设时：

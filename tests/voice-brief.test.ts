@@ -738,6 +738,56 @@ describe('voice-brief marker block', () => {
 		expect(skill).toBe('voice-brief skill');
 	});
 
+	test('DeepSeek Harness 安装时会写入 ~/.dsh/AGENTS.md 并复用共享 skill', async () => {
+		const dshHome = path.join(await fs.mkdtemp(path.join(os.tmpdir(), 'voice-brief-dsh-')), '.dsh');
+		const agentsHome = await fs.mkdtemp(path.join(os.tmpdir(), 'voice-brief-agents-'));
+		const voiceBriefTemplate = await fs.readFile(path.join(process.cwd(), 'src/install/templates/voice-brief.md'), 'utf-8');
+		vi.doMock('../src/install/templates/SKILL.md', () => ({ default: 'voice-brief skill' }));
+		vi.doMock('../src/install/templates/voice-brief.md', () => ({ default: voiceBriefTemplate }));
+		const { VoiceBriefInstallService } = await import('../src/install/services/install-service.js');
+		const persona = {
+			fileName: '小美.md',
+			name: '小美',
+			instructions: '你是小美。',
+		} as VoicePersona;
+		const configModule = {
+			pathService: {
+				resolveAgentsHome: () => agentsHome,
+				resolveDshHome: () => dshHome,
+			},
+		};
+		const personaModule = {
+			personaService: {
+				ensureBundledPersonas: async () => {},
+				load: async () => persona,
+			},
+		};
+		const installModule = {
+			app: {
+				getModule(moduleType: unknown) {
+					if (moduleType === voiceBriefModules.VoiceBriefConfigModule) return configModule;
+					if (moduleType === voiceBriefModules.VoiceBriefPersonaModule) return personaModule;
+					throw new Error('未知测试模块');
+				},
+			},
+		} as VoiceBriefInstallModule;
+		(installModule as { markerBlockService: VoiceBriefMarkerBlockService }).markerBlockService = new VoiceBriefMarkerBlockService(installModule);
+		const service = new VoiceBriefInstallService(installModule);
+
+		const plan = await service.install('小美', 'dsh');
+		const prompt = await fs.readFile(path.join(dshHome, 'AGENTS.md'), 'utf-8');
+		const skill = await fs.readFile(path.join(agentsHome, 'skills', 'voice-brief', 'SKILL.md'), 'utf-8');
+
+		expect(plan.target).toBe('dsh');
+		expect(plan.files).toContain(path.join(dshHome, 'AGENTS.md'));
+		expect(prompt).toContain('<!-- voice-brief:dsh:start -->');
+		expect(prompt).toContain('语音简报协议');
+		expect(prompt).toContain('你是小美。');
+		expect(prompt).toContain('-a "dsh"');
+		expect(prompt).toContain('-p "小美"');
+		expect(skill).toBe('voice-brief skill');
+	});
+
 	test('初始化会复制内置人设模板到配置目录', async () => {
 		const configDir = await fs.mkdtemp(path.join(os.tmpdir(), 'voice-brief-persona-'));
 		const { intellectualPersonaText, sweetPersonaText } = await mockBundledPersonaTemplates();

@@ -13,7 +13,7 @@ import type { InstallOptions, InstallPlan, InstallTarget, InstallVerboseValue } 
 import type { VoiceBriefInstallModule } from '../index';
 
 const ClaudeVoiceBriefPermission = 'Bash(voice-brief:*)';
-const SharedSkillTargets = ['codex', 'opencode', 'copilot', 'pi', 'kimi-code', 'zcode'] as const;
+const SharedSkillTargets = ['codex', 'opencode', 'copilot', 'pi', 'kimi-code', 'zcode', 'dsh'] as const;
 
 type SharedSkillTarget = typeof SharedSkillTargets[number];
 
@@ -32,6 +32,7 @@ export class VoiceBriefInstallService {
 		if (target === 'pi') return this.installPi(persona, normalized);
 		if (target === 'kimi-code') return this.installKimiCode(persona, normalized);
 		if (target === 'zcode') return this.installZcode(persona, normalized);
+		if (target === 'dsh') return this.installDsh(persona, normalized);
 		throw new Error(`未知安装目标: ${target}`);
 	}
 
@@ -44,11 +45,12 @@ export class VoiceBriefInstallService {
 		if (target === 'pi') return this.uninstallPi(normalized);
 		if (target === 'kimi-code') return this.uninstallKimiCode(normalized);
 		if (target === 'zcode') return this.uninstallZcode(normalized);
+		if (target === 'dsh') return this.uninstallDsh(normalized);
 		throw new Error(`未知安装目标: ${target}`);
 	}
 
 	parseInstallTarget(value: string): InstallTarget {
-		if (value === 'codex' || value === 'claude' || value === 'opencode' || value === 'copilot' || value === 'pi' || value === 'kimi-code' || value === 'zcode') return value;
+		if (value === 'codex' || value === 'claude' || value === 'opencode' || value === 'copilot' || value === 'pi' || value === 'kimi-code' || value === 'zcode' || value === 'dsh') return value;
 		throw new Error(`未知安装目标: ${value}`);
 	}
 
@@ -178,6 +180,11 @@ export class VoiceBriefInstallService {
 		return this.installSharedSkillTarget(persona, 'zcode', targetFile, 'ZCode', options);
 	}
 
+	private async installDsh(persona: VoicePersona, options: Required<InstallOptions>): Promise<InstallPlan> {
+		const targetFile = this.getDshAgentsFile();
+		return this.installSharedSkillTarget(persona, 'dsh', targetFile, 'DeepSeek Harness', options);
+	}
+
 	private async uninstallPi(options: Required<InstallOptions>): Promise<InstallPlan> {
 		const targetFile = this.getPiAgentsFile();
 		const skillFile = this.getSharedSkillFile();
@@ -220,6 +227,21 @@ export class VoiceBriefInstallService {
 			target: 'zcode',
 			files: [targetFile, skillFile],
 			messages: ['ZCode voice-brief 配置已移除'],
+		};
+	}
+
+	private async uninstallDsh(options: Required<InstallOptions>): Promise<InstallPlan> {
+		const targetFile = this.getDshAgentsFile();
+		const skillFile = this.getSharedSkillFile();
+		const current = await this.readText(targetFile);
+		await this.writeText(targetFile, this.module.markerBlockService.remove(current, 'dsh'), options.dryRun);
+		await this.removeSharedSkillIfUnused('dsh', skillFile, options.dryRun);
+		return {
+			action: 'uninstall',
+			dryRun: options.dryRun,
+			target: 'dsh',
+			files: [targetFile, skillFile],
+			messages: ['DeepSeek Harness voice-brief 配置已移除'],
 		};
 	}
 
@@ -266,6 +288,10 @@ export class VoiceBriefInstallService {
 
 	private getZcodeAgentsFile() {
 		return path.join(this.getConfigModule().pathService.resolveZcodeHome(), 'AGENTS.md');
+	}
+
+	private getDshAgentsFile() {
+		return path.join(this.getConfigModule().pathService.resolveDshHome(), 'AGENTS.md');
 	}
 
 	private renderPromptTemplate(persona: VoicePersona, agent: InstallTarget, verbose: boolean) {
@@ -330,6 +356,7 @@ export class VoiceBriefInstallService {
 		if (target === 'pi') return this.getPiAgentsFile();
 		if (target === 'kimi-code') return this.getKimiCodeAgentsFile();
 		if (target === 'zcode') return this.getZcodeAgentsFile();
+		if (target === 'dsh') return this.getDshAgentsFile();
 		return this.getCopilotInstructionsFile();
 	}
 

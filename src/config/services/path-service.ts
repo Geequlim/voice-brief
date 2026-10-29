@@ -90,6 +90,10 @@ export class VoiceBriefPathService {
 		return this.envPath(env, 'ZCODE_HOME') || path.join(os.homedir(), '.zcode');
 	}
 
+	resolveDshHome(env: NodeJS.ProcessEnv = process.env) {
+		return this.envPath(env, 'DSH_HOME') || path.join(os.homedir(), '.dsh');
+	}
+
 	private async createEnvPaths(name: string) {
 		const module = await import('env-paths') as { default: EnvPathsFactory };
 		return module.default(name, { suffix: '' });

@@ -1,4 +1,4 @@
-export type InstallTarget = 'codex' | 'claude' | 'opencode' | 'copilot' | 'pi' | 'kimi-code' | 'zcode';
+export type InstallTarget = 'codex' | 'claude' | 'opencode' | 'copilot' | 'pi' | 'kimi-code' | 'zcode' | 'dsh';
 export type InstallVerboseValue = 'true' | 'false' | 'on' | 'off';
 
 export interface InstallOptions {
