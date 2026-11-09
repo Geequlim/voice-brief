@@ -1,5 +1,6 @@
 
 declare const global: {
+	ui_scale: number;
 	log(message: string): void;
 	logError(error: unknown, message: string): void;
 };

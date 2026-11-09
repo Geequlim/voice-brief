@@ -143,7 +143,8 @@ const DialoguePango = (imports.gi as unknown as { Pango: CinnamonPango }).Pango;
 const St = (imports.gi as unknown as { St: CinnamonSt }).St;
 const Main = (imports as unknown as { ui: { main: CinnamonMain } }).ui.main;
 
-const FINAL_WIDTH = 1120;
+const FINAL_WIDTH = 1000;
+const SCREEN_GUTTER = 64;
 const CARD_INSET_X = 18;
 const CARD_INSET_Y = 14;
 const CONTENT_GAP = 16;
@@ -749,7 +750,9 @@ class DialogueOverlay {
 		const avatarWidth = hasAvatar ? measuredAvatarWidth : 0;
 		const avatarHeight = hasAvatar ? measuredAvatarHeight : 0;
 		const monitor = Main.layoutManager.primaryMonitor;
-		const finalWidth = Math.min(FINAL_WIDTH, monitor.width - 64);
+		// Stage coordinates use scaled pixels on X11 and logical units on Wayland.
+		const scale = global.ui_scale;
+		const finalWidth = Math.min(FINAL_WIDTH * scale, monitor.width - SCREEN_GUTTER * scale);
 		const avatarGap = hasAvatar ? CONTENT_GAP : 0;
 		const finalPanelWidth = finalWidth - CARD_INSET_X * 2 - avatarWidth - avatarGap;
 		this.$dialoguePanel.set_size(finalPanelWidth, -1);
