@@ -67,6 +67,8 @@ The context line under the title shows the session name when available, otherwis
 
 ## Dialogue behavior
 
+The entrance animation plays a soft single tone for progress and a two-note cue for conclusions. The cue uses `pw-play` or `paplay` when available.
+
 - A new briefing plays a short entrance animation: the avatar pops in, then the dialogue expands and settles.
 - A queued follow-up keeps the panel visible and replaces the content in place with a single emphasis animation.
 - Press `Esc` or the on-card hide button to dismiss the current briefing. Later events for a dismissed briefing are ignored until it finishes.

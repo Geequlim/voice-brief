@@ -20,6 +20,7 @@ interface DialogueOverlayHandle {
 }
 
 interface CinnamonExtensionMetadata {
+	path: string;
 	uuid: string;
 }
 
@@ -53,7 +54,11 @@ const {
 	createDialogueOverlay: createExtensionDialogueOverlay,
 	getDialoguePlaybackStartDelayMs: getExtensionPlaybackStartDelayMs,
 } = require('./dialogue-overlay') as {
-	createDialogueOverlay(position: ExtensionDialoguePosition, screenMargin: number): DialogueOverlayHandle;
+	createDialogueOverlay(
+		position: ExtensionDialoguePosition,
+		screenMargin: number,
+		playEntranceCue: (kind: BriefKind) => void,
+	): DialogueOverlayHandle;
 	getDialoguePlaybackStartDelayMs(): number;
 };
 const ExtensionGio = imports.gi.Gio;
@@ -68,7 +73,7 @@ class VoiceBriefExtension {
 	private $hookServer?: HookServerHandle;
 	private $dialogueOverlay?: DialogueOverlayHandle;
 
-	constructor(metadata: CinnamonExtensionMetadata) {
+	constructor(private readonly metadata: CinnamonExtensionMetadata) {
 		this.$uuid = metadata.uuid;
 	}
 
@@ -80,7 +85,11 @@ class VoiceBriefExtension {
 		settings.bind('screen-margin', '$screenMargin', () => {
 			this.$dialogueOverlay?.setScreenMargin(this.$screenMargin);
 		});
-		const dialogueOverlay = createExtensionDialogueOverlay(this.$screenPosition, this.$screenMargin);
+		const dialogueOverlay = createExtensionDialogueOverlay(
+			this.$screenPosition,
+			this.$screenMargin,
+			kind => this.$playEntranceCue(kind),
+		);
 		const hookServer = createExtensionHookServer(
 			getExtensionSocketPath(),
 			parseExtensionHookEvent,
@@ -97,6 +106,21 @@ class VoiceBriefExtension {
 			settings.finalize();
 			dialogueOverlay.destroy();
 			throw error;
+		}
+	}
+
+	private $playEntranceCue(kind: BriefKind): void {
+		const player = ExtensionGLib.find_program_in_path('pw-play') ?? ExtensionGLib.find_program_in_path('paplay');
+		if (!player) return;
+		const sound = kind === 'progress' ? 'progress.wav' : 'final.wav';
+		const path = ExtensionGLib.build_filenamev([this.metadata.path, 'sounds', sound]);
+		try {
+			ExtensionGio.Subprocess.new(
+				[player, path],
+				ExtensionGio.SubprocessFlags.STDOUT_SILENCE | ExtensionGio.SubprocessFlags.STDERR_SILENCE,
+			);
+		} catch (error) {
+			global.logError(error, '[voice-brief] failed to play entrance cue');
 		}
 	}
 

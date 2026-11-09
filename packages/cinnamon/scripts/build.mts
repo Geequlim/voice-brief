@@ -14,6 +14,7 @@ execFileSync('yarn', ['tsc', '-p', `${packageDirectory}/tsconfig.json`], {
 });
 await mkdir(outputDirectory, { recursive: true });
 await Promise.all([
+	cp(`${assetDirectory}/sounds`, `${outputDirectory}/sounds`, { recursive: true }),
 	cp(`${assetDirectory}/metadata.json`, `${outputDirectory}/metadata.json`),
 	cp(`${assetDirectory}/settings-schema.json`, `${outputDirectory}/settings-schema.json`),
 	cp(`${assetDirectory}/stylesheet.css`, `${outputDirectory}/stylesheet.css`),

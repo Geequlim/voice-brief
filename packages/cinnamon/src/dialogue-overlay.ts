@@ -143,7 +143,7 @@ const DialoguePango = (imports.gi as unknown as { Pango: CinnamonPango }).Pango;
 const St = (imports.gi as unknown as { St: CinnamonSt }).St;
 const Main = (imports as unknown as { ui: { main: CinnamonMain } }).ui.main;
 
-const FINAL_WIDTH = 1800;
+const FINAL_WIDTH = 1120;
 const CARD_INSET_X = 18;
 const CARD_INSET_Y = 14;
 const CONTENT_GAP = 16;
@@ -201,7 +201,11 @@ class DialogueOverlay {
 	private $position: OverlayDialoguePosition;
 	private $screenMargin: number;
 
-	constructor(position: OverlayDialoguePosition, screenMargin: number) {
+	constructor(
+		position: OverlayDialoguePosition,
+		screenMargin: number,
+		private readonly $playEntranceCue: (kind: BriefKind) => void,
+	) {
 		this.$position = position;
 		this.$screenMargin = screenMargin;
 		this.$root = new St.Widget({
@@ -300,10 +304,13 @@ class DialogueOverlay {
 			return;
 		}
 		if (event.event === 'playback.ready') {
+			if (event.briefId === this.$briefId) return;
 			if (this.$phase === 'holding' || this.$phase === 'exiting') {
+				this.$playEntranceCue(event.brief.kind);
 				this.$replaceDialogue(event);
 				return;
 			}
+			if (this.$phase === 'idle') this.$playEntranceCue(event.brief.kind);
 			this.$showDialogue(event);
 			return;
 		}
@@ -747,6 +754,10 @@ class DialogueOverlay {
 		const finalPanelWidth = finalWidth - CARD_INSET_X * 2 - avatarWidth - avatarGap;
 		this.$dialoguePanel.set_size(finalPanelWidth, -1);
 		this.$dialoguePanel.show();
+		// St resolves child styles when mapped. Measure the invisible panel after
+		// mapping so wrapped text and the hide control contribute their full height.
+		this.$dialoguePanel.opacity = 0;
+		this.$root.show();
 		const [, finalPanelHeight] = this.$dialoguePanel.get_preferred_height(finalPanelWidth);
 		const finalHeight = Math.max(avatarHeight + CARD_INSET_Y * 2, finalPanelHeight + CARD_INSET_Y * 2);
 		const rootHeight = finalHeight;
@@ -969,8 +980,12 @@ class DialogueOverlay {
 }
 
 // oxlint-disable-next-line no-unused-vars -- Cinnamon exposes top-level functions through its legacy GJS module loader.
-function createDialogueOverlay(position: OverlayDialoguePosition, screenMargin: number): DialogueOverlay {
-	return new DialogueOverlay(position, screenMargin);
+function createDialogueOverlay(
+	position: OverlayDialoguePosition,
+	screenMargin: number,
+	playEntranceCue: (kind: BriefKind) => void,
+): DialogueOverlay {
+	return new DialogueOverlay(position, screenMargin, playEntranceCue);
 }
 
 // oxlint-disable-next-line no-unused-vars -- Cinnamon exposes top-level functions through its legacy GJS module loader.
